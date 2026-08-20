@@ -1,0 +1,27 @@
+{
+	"updatedAt": "2026-08-20T14:29:29.703Z",
+	"pi": {
+		"branch": "main",
+		"headSha": "5cd93f688aaab89dbb6dfa4aca535f21796ae185",
+		"headDate": "2026-08-20T13:59:38Z",
+		"headMessage": "feat(coding-agent): add development pi wrapper",
+		"version": "release v0.84.2",
+		"versionUrl": "https://github.com/earendil-works/pi/releases/tag/v0.84.2"
+	},
+	"codex": {
+		"branch": "main",
+		"headSha": "1674b0a130987522de3f34d080b793585a355da1",
+		"headDate": "2026-08-20T14:13:56Z",
+		"headMessage": "Expose managed policy for browser settings imports (#39720)",
+		"version": "release rust-v0.148.0",
+		"versionUrl": "https://github.com/openai/codex/releases/tag/rust-v0.148.0"
+	},
+	"dsh": {
+		"branch": "master",
+		"headSha": "141eb6fef83422698aef7a981029e843e8161534",
+		"headDate": "2026-08-19T15:11:50Z",
+		"headMessage": "Merge pull request #2783 from deepseek-harness/release/dsh-0.1.0-rc.8",
+		"version": "tag dsh-v0.1.0-rc.8",
+		"versionUrl": "https://github.com/deepseek-ai/DeepSeek-Harness/commits/master"
+	}
+}
