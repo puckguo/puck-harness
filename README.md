@@ -20,7 +20,7 @@ const puck = createPuck({ model: "deepseek-chat", tools: "coding" });
 const { text } = await puck.run("解释一下这个仓库");
 ```
 
-**150 个测试离线通过 · 零网络 · 0 依赖 · 审计通过 · 一行 mock provider 就能跑 e2e**
+**150 个测试全部离线通过 · 零网络 · 0 运行时依赖**
 
 [English](#english) · [对比表](#puck-vs-其他-agent-harness) · [架构](#架构) · [安装](#安装) · [使用](#使用)
 
@@ -56,7 +56,6 @@ import { createPuck } from "@puckguo123/sdk";
 | LLM provider | 30+ 内置，OpenAI 兼容 + Anthropic | 自家抽象层 | OpenAI 优先 | DeepSeek 优先 | Anthropic only |
 | 裁切单位 | **目录**（删即用） | npm 子包 | 不可裁切 | 插件 | 不可 |
 | 子进程沙箱 | 不强加 | 不强加 | **强制**（Linux Landlock） | 不强加 | 强制（macOS sbpl） |
-| 离线 mock | **有**（确定性剧本） | 无 | 无 | 无 | 无 |
 | 跨 harness 导入会话 | **pi / claude / codex** | 无 | 无 | 无 | 无 |
 | 会话格式 | 追加式 JSONL | JSONL | JSONL | JSONL | JSONL |
 | 协议层 | `AgentEvent` 流 + `StreamFn` | `StreamFn` | OpenAI 协议 | OpenAI 协议 | Anthropic SDK |
@@ -83,9 +82,8 @@ puck 假设一种用户：**想搞清楚 agent loop 到底怎么工作的人**�
 
 1. **核心 700 行**——一个晚上读完
 2. **零依赖**——`Agent` 类只依赖 Node 标准库
-3. **mock provider**——`createMockStreamFn([{text:"hello"}])` 跑通完整 e2e，零网络
-4. **按目录删**——`rm -rf packages/features/src/subagent` 然后 `tsc -b`，构建依然通过
-5. **每个包都能独立装**——`npm install @puckguo123/core` 就能在自己项目里嵌入 agent loop
+3. **按目录删**——`rm -rf packages/features/src/subagent` 然后 `tsc -b`，构建依然通过
+4. **每个包都能独立装**——`npm install @puckguo123/core` 就能在自己项目里嵌入 agent loop
 
 ### 什么时候**不**用 puck
 
@@ -114,7 +112,7 @@ puck 假设一种用户：**想搞清楚 agent loop 到底怎么工作的人**�
 │  llm     │  tools   │  session      │  features（四个独立目录）  │
 │  openai  │  bash    │  JSONL 日志    │  compaction  上下文压缩   │
 │  anthropic│  read   │  追加式/可回放  │  subagent    多 agent     │
-│  mock    │  write   │  跨 harness 导入│  skills      技能包       │
+│          │  write   │  跨 harness 导入│  skills      技能包       │
 │          │  edit    │               │  approval    审批门       │
 ├──────────┴──────────┴───────────────┴──────────────────────────┤
 │  core:  types / loop(纯函数) / Agent(状态) / validate           │
@@ -132,7 +130,7 @@ puck 假设一种用户：**想搞清楚 agent loop 到底怎么工作的人**�
 | 包 | 作用 | 依赖 |
 |---|---|---|
 | [`@puckguo123/core`](packages/core) | agent loop、消息模型、事件流 | 零 |
-| [`@puckguo123/llm`](packages/llm) | OpenAI 兼容 / Anthropic / mock | 零 |
+| [`@puckguo123/llm`](packages/llm) | OpenAI 兼容 / Anthropic 适配器 | 零 |
 | [`@puckguo123/session`](packages/session) | JSONL 持久化 + 跨 harness 导入 | 零 |
 | [`@puckguo123/tools`](packages/tools) | bash / read / write / edit | 零 |
 | [`@puckguo123/features`](packages/features) | compaction / subagent / skills / approval | 零 |
@@ -152,7 +150,7 @@ puck 假设一种用户：**想搞清楚 agent loop 到底怎么工作的人**�
 ```bash
 npm install -g puck-harness
 puck --help
-puck --mock "写一个 hello world"   # 离线 mock，不需要 API key
+puck "读一下 package.json，总结这个项目"
 ```
 
 ### 嵌入到你自己的项目
@@ -189,7 +187,6 @@ for await (const ev of agent.iterate("review src/foo.ts")) {
 
 ```bash
 puck "读一下 package.json，总结这个项目"
-puck --mock "hello world"                    # 离线 deterministic
 puck --model deepseek-chat "重构 src/utils.ts"
 puck /login anthropic                        # 存 API key 到 ~/.puck/auth.json
 puck /resume                                 # 合并显示 puck + pi + claude + codex 会话
@@ -271,26 +268,19 @@ puck /resume    # 默认仅当前项目；按 a 切换"全部目录"
 
 ---
 
-## 测试 & 离线开发
+## 测试
 
 ```bash
-npm test                # 150 个离线测试，零网络
+npm test                # 150 个测试全部通过，零网络依赖
 npm run typecheck       # tsc --noEmit
 npm run audit:publish   # 发布前自检：metadata + tarball + API key 扫描
-```
-
-mock provider 让 e2e 测试零网络：
-
-```ts
-import { createMockStreamFn } from "@puckguo123/llm/mock";
-const stream = createMockStreamFn([{ text: "hello" }, { text: " world" }]);
 ```
 
 ---
 
 ## Web 端
 
-**[@puckguo123/web](packages/web)** — 零依赖 HTTP/SSE 服务器 + 零构建浏览器 UI，把完整 harness 暴露到网页端：`puck-web --mock`（[http://127.0.0.1:8787](http://127.0.0.1:8787)）。协议就是 core 的 `AgentEvent` 逐帧 SSE，UI 复刻 CLI term.ts 的视觉语言（thinking 灰显、工具折叠、状态栏、会话恢复回放）。
+**[@puckguo123/web](packages/web)** — 零依赖 HTTP/SSE 服务器 + 零构建浏览器 UI，把完整 harness 暴露到网页端：`puck-web`（[http://127.0.0.1:8787](http://127.0.0.1:8787)）。协议就是 core 的 `AgentEvent` 逐帧 SSE，UI 复刻 CLI term.ts 的视觉语言（thinking 灰显、工具折叠、状态栏、会话恢复回放）。
 
 ---
 
