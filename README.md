@@ -10,8 +10,11 @@
 [![GitHub stars](https://img.shields.io/github/stars/puckguo/puck-harness)](https://github.com/puckguo/puck-harness)
 
 ```bash
-npm install -g puck-harness                   # CLI
-npm install @puckguo123/core                 # or just the agent loop, no UI
+npm install -g puck-harness
+```
+
+```bash
+npm install @puckguo123/core
 ```
 
 ```ts
