@@ -65,6 +65,14 @@ void
 **/void
 **/void/
 
+# ── 上游跟踪（仅开发环境，不进 repo / npm）──────────────────────
+# agent.md、scripts/track-upstream.mjs、docs/upstream-tracker/ 是维护者的
+# 周任务工具链（跟踪 pi/codex/dsh 更新并分析是否融合），属于本地开发
+# 流程，不属于开源仓库交付物。
+agent.md
+scripts/track-upstream.mjs
+docs/upstream-tracker/
+
 # ── 工具配置（与本仓库代码无关） ──────────────────────────────────
 # 编辑器
 .vscode/
