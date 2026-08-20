@@ -1,0 +1,23 @@
+# puck — git attributes
+# ======================================
+# Cross-platform line endings (Windows checkouts should not mangle shell scripts)
+
+* text=auto eol=lf
+
+# Shell + Node scripts: always LF (the npm + node ecosystem assumes LF)
+*.sh        eol=lf
+*.cjs       eol=lf
+*.mjs       eol=lf
+*.js        eol=lf
+*.ts        eol=lf
+*.json      eol=lf
+
+# Markdown + YAML: LF for diff cleanliness
+*.md        eol=lf
+*.yml       eol=lf
+*.yaml      eol=lf
+
+# Windows-native files (keep CRLF)
+*.bat       eol=crlf
+*.cmd       eol=crlf
+*.ps1       eol=crlf

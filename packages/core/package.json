@@ -1,0 +1,46 @@
+{
+	"name": "@puck-agent/core",
+	"version": "0.1.0",
+	"description": "puck core: message model, tool interface, agent loop, events. Zero dependencies.",
+	"type": "module",
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"default": "./dist/index.js"
+		},
+		"./package.json": "./package.json"
+	},
+	"files": [
+		"dist",
+		"README.md"
+	],
+	"sideEffects": false,
+	"keywords": [
+		"ai",
+		"agent",
+		"llm",
+		"harness",
+		"minimal"
+	],
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/puckguo/puck-harness.git",
+		"directory": "packages/core"
+	},
+	"homepage": "https://github.com/puckguo/puck-harness#readme",
+	"bugs": {
+		"url": "https://github.com/puckguo/puck-harness/issues"
+	},
+	"author": {
+		"name": "puck contributors"
+	},
+	"publishConfig": {
+		"access": "public"
+	},
+	"engines": {
+		"node": ">=22.18.0"
+	}
+}

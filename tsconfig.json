@@ -1,0 +1,38 @@
+{
+	"files": [],
+	"references": [
+		{
+			"path": "packages/core"
+		},
+		{
+			"path": "packages/llm"
+		},
+		{
+			"path": "packages/tools"
+		},
+		{
+			"path": "packages/session"
+		},
+		{
+			"path": "packages/features"
+		},
+		{
+			"path": "packages/sdk"
+		},
+		{
+			"path": "packages/cli"
+		},
+		{
+			"path": "packages/timing"
+		},
+		{
+			"path": "packages/web"
+		},
+		{
+			"path": "packages/store"
+		},
+		{
+			"path": "packages/memory"
+		}
+	]
+}

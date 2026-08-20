@@ -1,0 +1,39 @@
+{
+	"name": "puck-agent",
+	"version": "0.1.0",
+	"private": true,
+	"description": "puck — a minimal, trimmable agent harness",
+	"type": "module",
+	"workspaces": [
+		"packages/*"
+	],
+	"scripts": {
+		"build": "tsc -b",
+		"clean": "node scripts/clean.mjs",
+		"typecheck": "tsc -p tsconfig.check.json --noEmit",
+		"test": "node --test tests/core.test.ts tests/llm.test.ts tests/tools.test.ts tests/session.test.ts tests/features.test.ts tests/sdk.test.ts tests/auth.test.ts tests/real-api.test.ts tests/timing.test.ts tests/term.test.ts tests/term-spinner.test.ts tests/import.test.ts tests/web.test.ts tests/memory.test.ts",
+		"example": "node --experimental-strip-types examples/minimal.ts",
+		"example:mock": "node --experimental-strip-types examples/debug-mock.ts",
+		"example:trim": "node --experimental-strip-types examples/trim.ts",
+		"cli": "npm run build && node packages/cli/dist/index.js",
+		"web": "npm run build && node packages/web/dist/cli.js",
+		"audit:publish": "node scripts/audit-publish.mjs --pack",
+		"test:real": "node --test tests/real-api.test.ts"
+	},
+	"keywords": ["ai", "agent", "harness", "monorepo", "minimal", "trimmable"],
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/puckguo/puck-harness.git"
+	},
+	"homepage": "https://github.com/puckguo/puck-harness#readme",
+	"bugs": { "url": "https://github.com/puckguo/puck-harness/issues" },
+	"author": { "name": "puck contributors" },
+	"engines": {
+		"node": ">=22.18.0"
+	},
+	"devDependencies": {
+		"@types/node": "22.19.10",
+		"typescript": "5.9.3"
+	}
+}

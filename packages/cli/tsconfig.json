@@ -1,0 +1,33 @@
+{
+	"extends": "../../tsconfig.base.json",
+	"compilerOptions": {
+		"rootDir": "src",
+		"outDir": "dist"
+	},
+	"include": [
+		"src"
+	],
+	"references": [
+		{
+			"path": "../core"
+		},
+		{
+			"path": "../llm"
+		},
+		{
+			"path": "../tools"
+		},
+		{
+			"path": "../session"
+		},
+		{
+			"path": "../features"
+		},
+		{
+			"path": "../sdk"
+		},
+		{
+			"path": "../timing"
+		}
+	]
+}

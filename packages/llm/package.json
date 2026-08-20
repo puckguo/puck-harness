@@ -1,0 +1,61 @@
+{
+	"name": "@puck-agent/llm",
+	"version": "0.1.0",
+	"description": "puck LLM adapters: OpenAI-compatible, Anthropic, and a scripted mock. Zero dependencies.",
+	"type": "module",
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"default": "./dist/index.js"
+		},
+		"./openai": {
+			"types": "./dist/openai.d.ts",
+			"default": "./dist/openai.js"
+		},
+		"./anthropic": {
+			"types": "./dist/anthropic.d.ts",
+			"default": "./dist/anthropic.js"
+		},
+		"./mock": {
+			"types": "./dist/mock.d.ts",
+			"default": "./dist/mock.js"
+		},
+		"./package.json": "./package.json"
+	},
+	"files": [
+		"dist",
+		"README.md"
+	],
+	"sideEffects": false,
+	"keywords": [
+		"ai",
+		"llm",
+		"openai",
+		"anthropic",
+		"streaming"
+	],
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/puckguo/puck-harness.git",
+		"directory": "packages/llm"
+	},
+	"homepage": "https://github.com/puckguo/puck-harness#readme",
+	"bugs": {
+		"url": "https://github.com/puckguo/puck-harness/issues"
+	},
+	"author": {
+		"name": "puck contributors"
+	},
+	"publishConfig": {
+		"access": "public"
+	},
+	"engines": {
+		"node": ">=22.18.0"
+	},
+	"dependencies": {
+		"@puck-agent/core": "*"
+	}
+}

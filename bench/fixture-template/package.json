@@ -1,0 +1,5 @@
+{
+  "name": "bench-fixture",
+  "type": "module",
+  "scripts": { "test": "node test/math.test.js" }
+}

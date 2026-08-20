@@ -1,0 +1,52 @@
+{
+	"name": "@puck-agent/sdk",
+	"version": "0.1.0",
+	"description": "puck SDK: createPuck() — one call to assemble an agent from the pieces you want.",
+	"type": "module",
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"default": "./dist/index.js"
+		},
+		"./package.json": "./package.json"
+	},
+	"files": [
+		"dist",
+		"README.md"
+	],
+	"sideEffects": false,
+	"keywords": [
+		"ai",
+		"agent",
+		"sdk",
+		"harness"
+	],
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/puckguo/puck-harness.git",
+		"directory": "packages/sdk"
+	},
+	"homepage": "https://github.com/puckguo/puck-harness#readme",
+	"bugs": {
+		"url": "https://github.com/puckguo/puck-harness/issues"
+	},
+	"author": {
+		"name": "puck contributors"
+	},
+	"publishConfig": {
+		"access": "public"
+	},
+	"engines": {
+		"node": ">=22.18.0"
+	},
+	"dependencies": {
+		"@puck-agent/core": "*",
+		"@puck-agent/features": "*",
+		"@puck-agent/llm": "*",
+		"@puck-agent/session": "*",
+		"@puck-agent/tools": "*"
+	}
+}

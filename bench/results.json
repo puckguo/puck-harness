@@ -1,0 +1,150 @@
+{
+  "model": "MiniMax-M3",
+  "repeats": 2,
+  "results": [
+    {
+      "harness": "puck",
+      "task": "t1",
+      "repeat": 0,
+      "ms": 6082,
+      "ok": true,
+      "ttftMs": 570,
+      "inputTokens": 5283,
+      "outputTokens": 336
+    },
+    {
+      "harness": "pi",
+      "task": "t1",
+      "repeat": 0,
+      "ms": 9846,
+      "ok": true
+    },
+    {
+      "harness": "codex",
+      "task": "t1",
+      "repeat": 0,
+      "ms": 57771,
+      "ok": true
+    },
+    {
+      "harness": "puck",
+      "task": "t2",
+      "repeat": 0,
+      "ms": 49784,
+      "ok": true,
+      "ttftMs": 738,
+      "inputTokens": 9761,
+      "outputTokens": 620
+    },
+    {
+      "harness": "pi",
+      "task": "t2",
+      "repeat": 0,
+      "ms": 17104,
+      "ok": true
+    },
+    {
+      "harness": "codex",
+      "task": "t2",
+      "repeat": 0,
+      "ms": 27899,
+      "ok": true
+    },
+    {
+      "harness": "puck",
+      "task": "t3",
+      "repeat": 0,
+      "ms": 27512,
+      "ok": true,
+      "ttftMs": 900,
+      "inputTokens": 16236,
+      "outputTokens": 670
+    },
+    {
+      "harness": "pi",
+      "task": "t3",
+      "repeat": 0,
+      "ms": 22273,
+      "ok": true
+    },
+    {
+      "harness": "codex",
+      "task": "t3",
+      "repeat": 0,
+      "ms": 52572,
+      "ok": false
+    },
+    {
+      "harness": "codex",
+      "task": "t1",
+      "repeat": 1,
+      "ms": 20874,
+      "ok": true
+    },
+    {
+      "harness": "pi",
+      "task": "t1",
+      "repeat": 1,
+      "ms": 13239,
+      "ok": true
+    },
+    {
+      "harness": "puck",
+      "task": "t1",
+      "repeat": 1,
+      "ms": 39609,
+      "ok": true,
+      "ttftMs": 5852,
+      "inputTokens": 4690,
+      "outputTokens": 285
+    },
+    {
+      "harness": "codex",
+      "task": "t2",
+      "repeat": 1,
+      "ms": 167817,
+      "ok": true
+    },
+    {
+      "harness": "pi",
+      "task": "t2",
+      "repeat": 1,
+      "ms": 25425,
+      "ok": true
+    },
+    {
+      "harness": "puck",
+      "task": "t2",
+      "repeat": 1,
+      "ms": 6520,
+      "ok": true,
+      "ttftMs": 726,
+      "inputTokens": 4928,
+      "outputTokens": 286
+    },
+    {
+      "harness": "codex",
+      "task": "t3",
+      "repeat": 1,
+      "ms": 111012,
+      "ok": false
+    },
+    {
+      "harness": "pi",
+      "task": "t3",
+      "repeat": 1,
+      "ms": 67004,
+      "ok": true
+    },
+    {
+      "harness": "puck",
+      "task": "t3",
+      "repeat": 1,
+      "ms": 24727,
+      "ok": true,
+      "ttftMs": 767,
+      "inputTokens": 12193,
+      "outputTokens": 667
+    }
+  ]
+}

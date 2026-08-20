@@ -1,0 +1,105 @@
+# =====================================================================
+# puck — .gitignore (开源草案)
+# =====================================================================
+# 适用：仓库根目录
+# 目的：只跟踪"开源仓库需要的东西"，排除：
+#   - 隐私（auth.json, 真实 sessions）
+#   - 构建产物（dist/, tsbuildinfo）
+#   - 个人开发痕迹（brainstorm.md, puck-demo.txt, .patch-*.cjs）
+#   - 包管理锁文件二选一（package-lock.json ↔ pnpm-lock.yaml）
+#   - benchmark 临时数据（bench/home/）
+#
+# 注意：这个文件**只是草案**，还没创建真正的 .gitignore（因为还没
+# 决定包管理器：npm vs pnpm）。决策完后再决定保留哪个 lock 文件，
+# 然后把不用的那个忽略规则删掉。
+# =====================================================================
+
+# ── Node.js / TypeScript 标准忽略 ────────────────────────────────
+node_modules/
+**/node_modules/
+
+# TypeScript 增量构建缓存
+*.tsbuildinfo
+**/*.tsbuildinfo
+
+# 构建产物（每个 package 的 package.json#files 会显式包含 dist/，
+# 所以这里放心忽略）
+dist/
+**/dist/
+
+# 覆盖率（未来加测试覆盖时启用）
+coverage/
+*.lcov
+
+# ── 包管理器锁文件（必须二选一） ─────────────────────────────────
+# 默认忽略 pnpm，保留 npm 锁文件
+pnpm-lock.yaml
+# 如果决定改用 pnpm，把上面那行注释掉，启用下面这行：
+# package-lock.json
+
+# ── 真实运行数据（绝对不能进 git） ────────────────────────────────
+# session 持久化目录
+.puck/
+.puck-real-sessions/
+.puckhome/
+.puckhome-test/
+
+# benchmark 临时 home dir（包含真实 codex / puck 数据 + auth.json）
+bench/home/
+
+# ── 个人开发痕迹 ──────────────────────────────────────────────────
+# 100 KB 内部设计文档
+brainstorm.md
+
+# 一键补丁本地脚本
+.patch-*.cjs
+.patch-*.mjs
+.patch-*.sh
+
+# 测试输出 / demo 文件
+puck-demo.txt
+*-demo.txt
+
+# 占位空文件
+void
+**/void
+**/void/
+
+# ── 工具配置（与本仓库代码无关） ──────────────────────────────────
+# 编辑器
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 日志 / 临时
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+yarn-dedupe.log*
+.pnpm-debug.log*
+
+# 环境变量（API key 等）
+.env
+.env.local
+.env.*.local
+
+# ── 发布相关 ──────────────────────────────────────────────────────
+# npm publish 临时产物
+*.tgz
+
+# ── Changeset 自动产物 ───────────────────────────────────────────
+# 已经被 merge 进 CHANGELOG 的 changeset 文件
+# （由 @changesets/cli 自动管理，初次 setup 阶段不要忽略）
+# .changeset/*.md
+
+# ── GitHub Actions 自托管 runner 临时 ────────────────────────────
+# 不会用到，列在这里只是完整性
+.runner/

@@ -1,0 +1,10 @@
+{
+	"_comment": "API key store for puck's /login. Real file is ~/.puck/auth.json (chmod 600). This .example file is committed for documentation — DO NOT put real keys here.",
+	"_format": "{ \"<provider-id>\": \"<api-key>\", ... }",
+	"_providers_listed_in_": "packages/llm/src/auth.ts (PROVIDERS array)",
+	"_example_entries": {
+		"anthropic": "sk-ant-EXAMPLE-DO-NOT-USE-XXXXXXXXXXXXXX",
+		"openai": "sk-EXAMPLE-DO-NOT-USE-XXXXXXXXXXXXXX",
+		"minimax-cn": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.EXAMPLE-DO-NOT-USE"
+	}
+}

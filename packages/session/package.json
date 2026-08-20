@@ -1,0 +1,52 @@
+{
+	"name": "@puck-agent/session",
+	"version": "0.1.0",
+	"description": "puck session persistence: append-only JSONL transcripts. Zero dependencies.",
+	"type": "module",
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"default": "./dist/index.js"
+		},
+		"./package.json": "./package.json",
+		"./import": {
+			"types": "./dist/import.d.ts",
+			"default": "./dist/import.js"
+		}
+	},
+	"files": [
+		"dist",
+		"README.md"
+	],
+	"sideEffects": false,
+	"keywords": [
+		"ai",
+		"agent",
+		"session",
+		"persistence"
+	],
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/puckguo/puck-harness.git",
+		"directory": "packages/session"
+	},
+	"homepage": "https://github.com/puckguo/puck-harness#readme",
+	"bugs": {
+		"url": "https://github.com/puckguo/puck-harness/issues"
+	},
+	"author": {
+		"name": "puck contributors"
+	},
+	"publishConfig": {
+		"access": "public"
+	},
+	"engines": {
+		"node": ">=22.18.0"
+	},
+	"dependencies": {
+		"@puck-agent/core": "*"
+	}
+}

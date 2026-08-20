@@ -1,0 +1,54 @@
+{
+	"name": "@puck-agent/store",
+	"version": "0.1.0",
+	"description": "puck conversation index — single sqlite file in the system dir",
+	"type": "module",
+	"main": "dist/index.js",
+	"types": "dist/index.d.ts",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"default": "./dist/index.js"
+		}
+	},
+	"files": [
+		"dist",
+		"README.md"
+	],
+	"sideEffects": false,
+	"keywords": [
+		"ai",
+		"agent",
+		"storage",
+		"kv",
+		"index"
+	],
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/puckguo/puck-harness.git",
+		"directory": "packages/store"
+	},
+	"homepage": "https://github.com/puckguo/puck-harness#readme",
+	"bugs": {
+		"url": "https://github.com/puckguo/puck-harness/issues"
+	},
+	"author": {
+		"name": "puck contributors"
+	},
+	"publishConfig": {
+		"access": "public"
+	},
+	"engines": {
+		"node": ">=22.18.0"
+	},
+	"scripts": {
+		"build": "tsc -b"
+	},
+	"dependencies": {
+		"@puck-agent/core": "*"
+	},
+	"devDependencies": {
+		"typescript": "^5.9.3"
+	}
+}

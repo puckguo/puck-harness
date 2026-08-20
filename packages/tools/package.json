@@ -1,0 +1,69 @@
+{
+	"name": "@puck-agent/tools",
+	"version": "0.1.0",
+	"description": "puck built-in tools: bash, read, write, edit. Zero dependencies.",
+	"type": "module",
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"default": "./dist/index.js"
+		},
+		"./bash": {
+			"types": "./dist/bash.d.ts",
+			"default": "./dist/bash.js"
+		},
+		"./read": {
+			"types": "./dist/read.d.ts",
+			"default": "./dist/read.js"
+		},
+		"./write": {
+			"types": "./dist/write.d.ts",
+			"default": "./dist/write.js"
+		},
+		"./edit": {
+			"types": "./dist/edit.d.ts",
+			"default": "./dist/edit.js"
+		},
+		"./truncate": {
+			"types": "./dist/truncate.d.ts",
+			"default": "./dist/truncate.js"
+		},
+		"./package.json": "./package.json"
+	},
+	"files": [
+		"dist",
+		"README.md"
+	],
+	"sideEffects": false,
+	"keywords": [
+		"ai",
+		"agent",
+		"tools",
+		"bash",
+		"edit"
+	],
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/puckguo/puck-harness.git",
+		"directory": "packages/tools"
+	},
+	"homepage": "https://github.com/puckguo/puck-harness#readme",
+	"bugs": {
+		"url": "https://github.com/puckguo/puck-harness/issues"
+	},
+	"author": {
+		"name": "puck contributors"
+	},
+	"publishConfig": {
+		"access": "public"
+	},
+	"engines": {
+		"node": ">=22.18.0"
+	},
+	"dependencies": {
+		"@puck-agent/core": "*"
+	}
+}

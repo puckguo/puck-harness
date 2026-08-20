@@ -1,0 +1,60 @@
+{
+	"name": "@puck-agent/features",
+	"version": "0.1.0",
+	"description": "puck optional features: compaction, subagent, skills, approval. Each subpath is independent and deletable.",
+	"type": "module",
+	"exports": {
+		"./compaction": {
+			"types": "./dist/compaction/index.d.ts",
+			"default": "./dist/compaction/index.js"
+		},
+		"./subagent": {
+			"types": "./dist/subagent/index.d.ts",
+			"default": "./dist/subagent/index.js"
+		},
+		"./skills": {
+			"types": "./dist/skills/index.d.ts",
+			"default": "./dist/skills/index.js"
+		},
+		"./approval": {
+			"types": "./dist/approval/index.d.ts",
+			"default": "./dist/approval/index.js"
+		},
+		"./package.json": "./package.json"
+	},
+	"files": [
+		"dist",
+		"README.md"
+	],
+	"sideEffects": false,
+	"keywords": [
+		"ai",
+		"agent",
+		"compaction",
+		"subagent",
+		"skills",
+		"approval"
+	],
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/puckguo/puck-harness.git",
+		"directory": "packages/features"
+	},
+	"homepage": "https://github.com/puckguo/puck-harness#readme",
+	"bugs": {
+		"url": "https://github.com/puckguo/puck-harness/issues"
+	},
+	"author": {
+		"name": "puck contributors"
+	},
+	"publishConfig": {
+		"access": "public"
+	},
+	"engines": {
+		"node": ">=22.18.0"
+	},
+	"dependencies": {
+		"@puck-agent/core": "*"
+	}
+}

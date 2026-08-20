@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agent Harness 对比讲解 — pi · Codex · DeepSeek Harness · puck</title>
+<style>
+	:root {
+		--bg:#0f1115; --card:#171a21; --card2:#1b1f28; --border:#252a35; --text:#d7dce5; --dim:#8b93a5;
+		--accent:#4f8cff; --good:#3fb970; --warn:#e0a93f; --bad:#e05b5b; --purple:#a06bff; --teal:#3fc9b0;
+	}
+	* { box-sizing:border-box; margin:0; }
+	body { background:var(--bg); color:var(--text); font:15px/1.7 -apple-system,"Segoe UI","Microsoft YaHei",sans-serif; padding:32px 24px; max-width:1180px; margin:0 auto; }
+	h1 { font-size:26px; margin-bottom:6px; }
+	h2 { font-size:19px; margin:44px 0 6px; color:var(--accent); }
+	h2 .sub { font-size:13px; color:var(--dim); font-weight:normal; margin-left:8px; }
+	h3 { font-size:15px; margin:0 0 8px; }
+	p.lead { color:var(--dim); margin-bottom:8px; }
+	.grid2 { display:grid; grid-template-columns:repeat(auto-fit,minmax(340px,1fr)); gap:16px; }
+	.card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:18px 20px; }
+	.card.big { background:var(--card2); }
+	.tag { display:inline-block; padding:2px 10px; border-radius:12px; font-size:12px; margin-right:6px; }
+	.tag.pi { background:rgba(160,107,255,.15); color:var(--purple); }
+	.tag.codex { background:rgba(79,140,255,.15); color:var(--accent); }
+	.tag.dsh { background:rgba(63,201,176,.15); color:var(--teal); }
+	.tag.puck { background:rgba(63,185,112,.15); color:var(--good); }
+	ul { padding-left:18px; }
+	li { margin:5px 0; }
+	li.good::marker { color:var(--good); }
+	li.bad::marker { color:var(--bad); }
+	li.neutral::marker { color:var(--dim); }
+	table { width:100%; border-collapse:collapse; background:var(--card); border:1px solid var(--border); border-radius:10px; overflow:hidden; margin-top:10px; }
+	th,td { padding:9px 12px; text-align:left; border-bottom:1px solid var(--border); font-size:13.5px; vertical-align:top; }
+	th { background:#1c2029; color:var(--dim); font-weight:600; font-size:12.5px; }
+	tr:last-child td { border-bottom:none; }
+	tbody tr:hover td { background:rgba(255,255,255,.02); }
+	.ok { color:var(--good); } .no { color:var(--bad); } .part { color:var(--warn); }
+	.bars { display:flex; flex-direction:column; gap:8px; margin-top:12px; }
+	.bar-row { display:grid; grid-template-columns:190px 1fr 120px; gap:10px; align-items:center; font-size:13px; }
+	.bar-track { background:#20242e; border-radius:5px; height:18px; position:relative; overflow:hidden; }
+	.bar-fill { position:absolute; inset:0 auto 0 0; border-radius:5px; }
+	.bar-val { color:var(--dim); font-variant-numeric:tabular-nums; }
+	.quote { border-left:3px solid var(--accent); padding:8px 14px; background:var(--card); border-radius:0 8px 8px 0; color:var(--dim); margin:10px 0; font-size:13.5px; }
+	.src { font-size:11.5px; color:var(--dim); }
+	.footnote { color:var(--dim); font-size:12.5px; margin-top:8px; }
+	code { background:#20242e; padding:1px 6px; border-radius:4px; font-size:12.5px; color:#c9d4e8; }
+	.arch { font-family:ui-monospace,Consolas,monospace; font-size:11.5px; line-height:1.5; color:#aeb8cc; background:#12151c; border:1px solid var(--border); border-radius:8px; padding:12px 14px; white-space:pre; overflow-x:auto; }
+	.pill-row { display:flex; flex-wrap:wrap; gap:6px; margin:6px 0 10px; }
+</style>
+</head>
+<body>
+
+<h1>Agent Harness 横向对比讲解</h1>
+<p class="lead">pi · OpenAI Codex CLI · DeepSeek Harness (dsh) · puck agent harness —— 四种设计哲学的正面交锋。数据基于 2026-08 本地源码树实测统计。</p>
+
+<!-- ================================================================ -->
+<h2>一图看懂：四个 harness 的定位</h2>
+<div class="grid2">
+	<div class="card"><span class="tag pi">pi</span><h3>分层复用派</h3>
+		<p class="src">“General-purpose agent with transport abstraction” —— 从统一 LLM API 到可自扩展编码代理的全链路开源库。</p>
+		<div class="pill-row"><span class="tag" style="background:#20242e;color:var(--dim)">TS monorepo</span><span class="tag" style="background:#20242e;color:var(--dim)">多 provider</span><span class="tag" style="background:#20242e;color:var(--dim)">库优先</span></div></div>
+	<div class="card"><span class="tag codex">codex</span><h3>工业沙箱派</h3>
+		<p class="src">OpenAI 出品。Rust 核心 + 审批策略 + 多级沙箱 + 云任务，经海量真实使用锤炼的生产级编码代理。</p>
+		<div class="pill-row"><span class="tag" style="background:#20242e;color:var(--dim)">Rust + TS SDK</span><span class="tag" style="background:#20242e;color:var(--dim)">进程隔离</span><span class="tag" style="background:#20242e;color:var(--dim)">安全优先</span></div></div>
+	<div class="card"><span class="tag dsh">dsh</span><h3>插件生态派</h3>
+		<p class="src">DeepSeek 出品。“Everything is a plugin”，基于 Cordis 框架，会话日志是唯一事实，Web UI 与 headless 同源。</p>
+		<div class="pill-row"><span class="tag" style="background:#20242e;color:var(--dim)">Cordis 插件</span><span class="tag" style="background:#20242e;color:var(--dim)">日志即事实</span><span class="tag" style="background:#20242e;color:var(--dim)">Web UI</span></div></div>
+	<div class="card"><span class="tag puck">puck</span><h3>极简裁切派</h3>
+		<p class="src">自研 harness：核心 ~700 行零依赖，不需要的功能直接删目录，mock 剧本离线调试，自带计时观测。</p>
+		<div class="pill-row"><span class="tag" style="background:#20242e;color:var(--dim)">零依赖</span><span class="tag" style="background:#20242e;color:var(--dim)">目录级裁切</span><span class="tag" style="background:#20242e;color:var(--dim)">确定性 mock</span></div></div>
+</div>
+
+<!-- ================================================================ -->
+<h2>规模与复杂度 <span class="sub">源码行数实测（不含测试 / dist / vendor / website）</span></h2>
+<div class="bars">
+	<div class="bar-row"><div>Codex CLI（Rust 核心）</div><div class="bar-track"><div class="bar-fill" style="width:100%;background:var(--accent)"></div></div><div class="bar-val">~120,300 行 · ~90 crates</div></div>
+	<div class="bar-row"><div>pi（全部包 TS 源码）</div><div class="bar-track"><div class="bar-fill" style="width:94%;background:var(--purple)"></div></div><div class="bar-val">~113,700 行 · 9 包</div></div>
+	<div class="bar-row"><div>dsh（packages TS 源码）</div><div class="bar-track"><div class="bar-fill" style="width:32%;background:var(--teal)"></div></div><div class="bar-val">~38,300 行 · ~50 包</div></div>
+	<div class="bar-row"><div style="color:var(--good)">puck（全部源码）</div><div class="bar-track"><div class="bar-fill" style="width:4%;background:var(--good)"></div></div><div class="bar-val" style="color:var(--good)">~4,400 行 · 8 包 · 0 外部依赖</div></div>
+</div>
+<p class="footnote">规模本身不是优劣 —— 它衡量的是「完全装进脑子」的可能性。puck 的核心（types + loop + Agent）约 700 行，是唯一可以断言“一个人一下午能通读全部核心路径”的实现。</p>
+
+<!-- ================================================================ -->
+<h2>架构鸟瞰 <span class="sub">各自的分层与接缝</span></h2>
+<div class="grid2">
+	<div class="card"><span class="tag pi">pi</span>
+<div class="arch">ai (pi-ai)        ← 10 种 provider 协议 + OAuth + 凭据库
+agent (core)      ← 纯函数 loop + Agent + 钩子 + 会话
+coding-agent      ← CLI + 扩展 + 技能 + TUI
+      ↑ StreamFn 单一接缝隔离全部 provider</div></div>
+	<div class="card"><span class="tag codex">codex</span>
+<div class="arch">codex-rs (Rust)   ← core + exec + app-server + sandbox
+                     + approvals + MCP + cloud-tasks
+codex-cli (TS)    ← 终端 UI
+TS/Python SDK     ← spawn CLI，stdin/stdout 交换 JSONL
+      ↑ 进程边界 = 稳定 ABI（版本隔离）</div></div>
+	<div class="card"><span class="tag dsh">dsh</span>
+<div class="arch">Cordis ctx        ← 插件容器（服务/事件/可逆副作用）
+core/* 插件       ← session(日志) agent loop tools system-prompt
+bundle 层         ← web / headless profile 组装
+      ↑ 一切皆插件：换掉任何部分不需 fork</div></div>
+	<div class="card"><span class="tag puck">puck</span>
+<div class="arch">core (~700 行)    ← types + 纯 loop + Agent
+llm / tools / session / features / sdk / cli
+      ↑ 目录 = 裁切单位，StreamFn = 唯一 provider 接缝
+      ↑ 删掉任何包，core 依旧编译运行</div></div>
+</div>
+
+<!-- ================================================================ -->
+<h2>逐个讲解：优点与缺点</h2>
+<div class="grid2">
+
+<div class="card big"><span class="tag pi">pi</span><h3>pi — 分层复用派</h3>
+	<p class="src" style="margin-bottom:6px"><b>值得学的：</b></p>
+	<ul>
+		<li class="good"><b>StreamFn 单一接缝</b>：loop 只认一个函数签名，10 种 provider 协议全部压在接缝后面 —— 本项目 puck 直接继承此设计</li>
+		<li class="good"><b>纯函数 loop + 薄状态包装</b>：调试可直接调 <code>runAgentLoop</code>，不碰状态机</li>
+		<li class="good"><b>边界处理细致</b>：length 截断时拒绝执行工具调用（参数可能不完整）、上下文压缩的 prefix 缓存、steering 队列</li>
+		<li class="good"><b>供应链硬化</b>：精确版本锁定、审计、shrinkwrap —— 开源 agent 的安全范本</li>
+	</ul>
+	<p class="src" style="margin:10px 0 6px"><b>代价与短板：</b></p>
+	<ul>
+		<li class="bad">provider 矩阵维护成本高：10 种 wire 协议 + 各家 OAuth 流程，个人项目难以跟进</li>
+		<li class="bad">消息模型带 provider 泄漏字段（textSignature / rawStopReason…），通用性打折</li>
+		<li class="bad">EventStream 泛型类 + typebox schema 依赖：为通用性引入抽象税</li>
+	</ul>
+</div>
+
+<div class="card big"><span class="tag codex">codex</span><h3>OpenAI Codex CLI — 工业沙箱派</h3>
+	<p class="src" style="margin-bottom:6px"><b>值得学的：</b></p>
+	<ul>
+		<li class="good"><b>Thread / Turn / Item 事件分层</b>：事件模型命名与语义是行业最清晰的，puck 的事件协议直接参考</li>
+		<li class="good"><b>SDK 易用性标准</b>：<code>thread.run()</code> 一次拿 <code>finalResponse + items</code>，90% 场景零样板 —— puck 的 <code>puck.run()</code> 同款理念</li>
+		<li class="good"><b>安全分层</b>：审批策略 + 多级沙箱 + 工作区信任度，生产环境真正敢放权</li>
+		<li class="good"><b>进程边界即 ABI</b>：SDK 与核心跨版本解耦，Rust 核心性能与内存安全</li>
+	</ul>
+	<p class="src" style="margin:10px 0 6px"><b>代价与短板：</b></p>
+	<ul>
+		<li class="bad">跨进程调试：SDK 问题要在 stdin/stdout JSONL 边界两侧同时看，远比进程内库难</li>
+		<li class="bad">工程体系重：Rust + Bazel + ~90 crates，二次开发门槛极高</li>
+		<li class="bad">宿主必须携带 CLI 二进制；SDK 本质是包装器而非可嵌入运行时</li>
+	</ul>
+</div>
+
+<div class="card big"><span class="tag dsh">dsh</span><h3>DeepSeek Harness — 插件生态派</h3>
+	<p class="src" style="margin-bottom:6px"><b>值得学的：</b></p>
+	<ul>
+		<li class="good"><b>“日志即事实”</b>：模型可见的一切必须能从追加式 SessionEvent 日志重建 —— 换 provider / 回放 / fork 全部免费获得。puck 的 session 设计直接继承</li>
+		<li class="good"><b>canonical transcript 与 LLM view 分离</b>（deriveMessages）：压缩/投影永不破坏原始历史</li>
+		<li class="good"><b>能力接缝</b>：文件系统/子进程/终端共享同一执行世界，指向远程沙箱时整套工具无需改动整体迁移</li>
+		<li class="good"><b>插件可逆副作用</b>：卸载即回滚，生态可组合性最强</li>
+	</ul>
+	<p class="src" style="margin:10px 0 6px"><b>代价与短板：</b></p>
+	<ul>
+		<li class="bad">Cordis 学习曲线陡：ctx 注入、waterfall 事件、scope 生命周期 —— 任何一行代码背后都是插件解析链，调试成本高</li>
+		<li class="bad">开发者预览期，明示会有破坏性变更</li>
+		<li class="bad">“一切皆插件”的间接层在热路径上带来理解与性能双重开销</li>
+	</ul>
+</div>
+
+<div class="card big"><span class="tag puck">puck</span><h3>puck — 极简裁切派（本项目）</h3>
+	<p class="src" style="margin-bottom:6px"><b>独有优势：</b></p>
+	<ul>
+		<li class="good"><b>目录 = 裁切单位</b>：不要多 agent？删 subagent 目录。不要持久化？删 session 包。构建依然通过 —— 比“运行时卸载插件”更彻底、更零成本</li>
+		<li class="good"><b>零外部依赖</b>：出问题全部代码可断点，无 node_modules 黑盒；供应链风险≈0</li>
+		<li class="good"><b>mock 剧本 provider</b>：确定性复现多轮工具流，CI 零网络，bug 复现只需 transcript + 脚本</li>
+		<li class="good"><b>计时观测（独有功能）</b>：每轮 TTFT / 时长 / tok-s 自动入账，自包含 HTML dashboard + LLM 用时合理性分析，四个 harness 中唯一内建</li>
+		<li class="good"><b>真实接入即战斗</b>：MiniMax-M3 &lt;think&gt; 内联思考剥离、错误后 steering 恢复、运行中切模型等边界全部实测修复</li>
+	</ul>
+	<p class="src" style="margin:10px 0 6px"><b>诚实的短板：</b></p>
+	<ul>
+		<li class="bad">生态为零：无扩展市场、无第三方插件、单一维护者</li>
+		<li class="bad">能力覆盖窄：无 MCP、无 OAuth（订阅制登录不可用）、无沙箱/审批沙箱分层、无 Web UI、无结构化输出</li>
+		<li class="bad">provider 协议只有 2 种（OpenAI 兼容 / Anthropic）+ mock；遇到私有协议要自己写 adapter</li>
+		<li class="bad">年轻：未经大规模生产锤炼，边界情况存量远多于三个前辈</li>
+	</ul>
+</div>
+</div>
+
+<!-- ================================================================ -->
+<h2>功能矩阵 <span class="sub">✓ 有 · ✗ 无 · ◐ 部分/通过扩展</span></h2>
+<table>
+<thead><tr><th style="width:170px">能力</th><th>pi</th><th>Codex</th><th>dsh</th><th>puck</th><th style="width:32%">备注</th></tr></thead>
+<tbody>
+<tr><td>多 provider 支持</td><td class="ok">✓ 10 种协议</td><td class="part">◐ OpenAI 系</td><td class="ok">✓ 适配器注册</td><td class="part">◐ 2 种 + 任意 OpenAI 兼容端点</td><td>puck 用 defineModel 覆盖 ollama/vllm/openrouter 等</td></tr>
+<tr><td>OAuth 订阅登录</td><td class="ok">✓ 完整</td><td class="ok">✓ ChatGPT 登录</td><td class="part">◐</td><td class="no">✗ 仅 API key（/login）</td><td> puck 刻意裁掉：OAuth 刷新竞态不值得为它引入锁</td></tr>
+<tr><td>MCP（外部工具协议）</td><td class="ok">✓</td><td class="ok">✓</td><td class="ok">✓</td><td class="no">✗</td><td>puck 工具即普通对象，接 MCP 需自写桥接</td></tr>
+<tr><td>沙箱 / 审批策略</td><td class="part">◐ 容器化指南</td><td class="ok">✓ 多级沙箱+审批</td><td class="part">◐ sandbox 后端</td><td class="part">◐ 审批门钩子 + 路径禁闭</td><td>生产放权场景 Codex 最强</td></tr>
+<tr><td>会话持久化</td><td class="ok">✓ JSONL+检索</td><td class="ok">✓</td><td class="ok">✓ 日志即事实</td><td class="ok">✓ JSONL 追加式</td><td>四家殊途同归：可 tail/grep 的文本日志</td></tr>
+<tr><td>上下文压缩</td><td class="ok">✓ 分支摘要</td><td class="ok">✓ compact</td><td class="ok">✓</td><td class="ok">✓ LLM 摘要+prefix 缓存</td><td>puck 的实现 ~120 行，可整目录删除</td></tr>
+<tr><td>子代理 / 多 agent</td><td class="part">◐ 扩展实现</td><td class="ok">✓ 云任务</td><td class="ok">✓ subagent provider</td><td class="ok">✓ 独立子代理工具</td><td>puck 的多 agent 是单文件、可删 feature</td></tr>
+<tr><td>Web UI</td><td class="no">✗ TUI</td><td class="no">✗ TUI/IDE</td><td class="ok">✓ 内建</td><td class="no">✗（dashboard 仅观测）</td><td>dsh 唯一带完整浏览器界面</td></tr>
+<tr><td>离线确定性测试</td><td class="part">◐ 依赖 key 跳过</td><td class="no">✗</td><td class="part">◐</td><td class="ok">✓ mock 剧本 provider</td><td>puck 特有：模型行为可逐轮脚本化</td></tr>
+<tr><td>延迟观测 dashboard</td><td class="no">✗</td><td class="no">✗</td><td class="no">✗</td><td class="ok">✓ TTFT/tok-s + LLM 分析</td><td>puck 独有功能</td></tr>
+<tr><td>嵌入为库（进程内 SDK）</td><td class="ok">✓ 分包即库</td><td class="no">✗ 需带 CLI 子进程</td><td class="ok">✓</td><td class="ok">✓ createPuck() 一步组装</td><td>进程内嵌入是 pi/dsh/puck 的共同取向</td></tr>
+<tr><td>功能裁切能力</td><td class="part">◐ 用包不用</td><td class="no">✗ 整体安装</td><td class="part">◐ 插件卸载（运行时）</td><td class="ok">✓ 目录物理删除</td><td>“不需要就删掉”是 puck 的第一设计目标</td></tr>
+<tr><td>测试离线可跑</td><td class="part">◐ 无 key 跳过</td><td class="no">✗</td><td class="part">◐</td><td class="ok">✓ 70/70 全离线</td><td>含真实协议层（stubbed SSE）测试</td></tr>
+</tbody>
+</table>
+
+<!-- ================================================================ -->
+<h2>设计哲学对撞 <span class="sub">同一个问题的四种答案</span></h2>
+<table>
+<thead><tr><th style="width:190px">问题</th><th>pi</th><th>Codex</th><th>dsh</th><th>puck</th></tr></thead>
+<tbody>
+<tr><td>「不需要的功能怎么办？」</td><td>分层分包，不用就不 import</td><td>不提供选择，整体交付</td><td>插件不加载即不存在</td><td class="ok"><b>物理删目录</b>，编译器保证无死代码</td></tr>
+<tr><td>「扩展机制是什么？」</td><td>钩子函数 + 扩展 API</td><td>配置 + MCP + 子进程</td><td>Cordis 事件/服务/接缝</td><td>4 个钩子 + 普通 TS 接口，无框架</td></tr>
+<tr><td>「Provider 差异藏哪？」</td><td>StreamFn 接缝（10 协议）</td><td>Rust 核心 internal</td><td>llm 适配器注册</td><td>StreamFn 接缝（继承 pi）</td></tr>
+<tr><td>「历史存哪？」</td><td>会话 JSONL + 索引</td><td>rollout 文件</td><td>追加式日志=唯一事实</td><td>JSONL（继承 dsh 思想）</td></tr>
+<tr><td>「怎么保证可调试？」</td><td>纯函数 loop + 源码可读</td><td>结构化日志 + 分层 crate</td><td>事件时间线 + 配置 dump</td><td>mock 剧本 + 零依赖 + 事件全量可见</td></tr>
+<tr><td>「安全边界靠什么？」</td><td>容器化指南（外部）</td><td>内建沙箱+审批</td><td>sandbox 后端插件</td><td>审批门钩子 + cwd 禁闭（刻意从简）</td></tr>
+</tbody>
+</table>
+
+<!-- ================================================================ -->
+<h2>puck 的血统 <span class="sub">每个设计决策的出处</span></h2>
+<div class="grid2">
+<div class="card">
+	<h3>从 pi 继承</h3>
+	<ul>
+		<li class="neutral">StreamFn 单一接缝 ← pi-ai 的核心洞察</li>
+		<li class="neutral">纯函数 loop + Agent 状态包装的分层</li>
+		<li class="neutral">beforeToolCall / afterToolCall 钩子形态</li>
+		<li class="neutral">length 截断拒绝执行工具调用的边界处理</li>
+		<li class="neutral">/login 的三层结构（UI 回调 / 编排 / 存储）与 key 优先级链</li>
+	</ul>
+</div>
+<div class="card">
+	<h3>从 Codex 借鉴</h3>
+	<ul>
+		<li class="neutral">run / turn / message / tool 四层事件模型（Thread/Turn/Item 的扁平化）</li>
+		<li class="neutral"><code>run()</code> 返回 { text, messages, usage } 的 SDK 易用性标准</li>
+		<li class="neutral">usage 分项统计（cached tokens 等）</li>
+	</ul>
+</div>
+<div class="card">
+	<h3>从 dsh 继承</h3>
+	<ul>
+		<li class="neutral">「日志即事实」：追加式 JSONL、撕裂行容错、fork 复制历史</li>
+		<li class="neutral">canonical transcript 与 transformContext 投影分离</li>
+		<li class="neutral">turn（一次输入到停止）/ step（一次模型请求）术语体系</li>
+	</ul>
+</div>
+<div class="card">
+	<h3>puck 原创</h3>
+	<ul>
+		<li class="neutral">目录级物理裁切（对照 dsh 的运行时插件卸载）</li>
+		<li class="neutral">mock 剧本 provider：确定性离线复现多轮工具流</li>
+		<li class="neutral">计时观测：TTFT 入账 → 自包含 dashboard → LLM 合理性分析</li>
+		<li class="neutral">&lt;think&gt; 内联思考流式剥离（真实接入 MiniMax-M3 时诞生）</li>
+	</ul>
+</div>
+</div>
+
+<!-- ================================================================ -->
+<h2>选型指南 <span class="sub">什么场景选什么</span></h2>
+<table>
+<thead><tr><th style="width:44%">你的场景</th><th>推荐</th><th>理由</th></tr></thead>
+<tbody>
+<tr><td>生产环境给陌生代码库放权，安全第一</td><td class="ok">Codex</td><td>多级沙箱 + 审批策略经过 OpenAI 规模验证</td></tr>
+<tr><td>要一个带 Web UI、可插拔一切的产品</td><td class="ok">dsh</td><td>插件生态 + 浏览器界面 + 日志回放开箱即用</td></tr>
+<tr><td>想嵌入自己的应用，且要多家 provider/OAuth</td><td class="ok">pi</td><td>分包即库 + 10 协议 + 订阅登录最全</td></tr>
+<tr><td>自研产品需要一个<b>看得懂、删得动、离线可测</b>的内嵌 agent 核心</td><td class="ok">puck</td><td>~700 行核心零依赖；不要的功能物理删除；mock 剧本进 CI；自带延迟观测</td></tr>
+<tr><td>学习 agent 内部原理</td><td class="ok">pi + puck 对照读</td><td>pi 是完整工业实现，puck 是同一套思想的极简骨架 —— 先读 puck 再读 pi 事半功倍</td></tr>
+</tbody>
+</table>
+<div class="quote">一句话总结：Codex 赢在<b>安全与规模</b>，dsh 赢在<b>生态与界面</b>，pi 赢在<b>库的完整与分层</b>，puck 赢在<b>极简、可裁切、可观测、可离线验证</b>。它们不是竞争关系，而是一条谱系：从「产品」到「框架」到「积木」。</div>
+
+<p class="footnote" style="margin-top:36px">统计口径：pi=pi/packages/*/src 非测试 TS；Codex=codex-rs 非测试 Rust（另有 TS CLI/SDK 未计）；dsh=packages 非测试 TS（排除 vendor/website）；puck=packages/*/src 全部 TS。功能矩阵基于各项目 2026-08 源码与文档； puck 数据来自本仓库实测（70/70 测试）。</p>
+
+</body>
+</html>

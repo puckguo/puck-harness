@@ -1,0 +1,55 @@
+{
+  "model": "MiniMax-M3",
+  "repeats": 2,
+  "results": [
+    {
+      "harness": "puck",
+      "task": "t4",
+      "repeat": 0,
+      "ms": 21583,
+      "ok": true,
+      "ttftMs": 955,
+      "inputTokens": 9646,
+      "outputTokens": 765
+    },
+    {
+      "harness": "pi",
+      "task": "t4",
+      "repeat": 0,
+      "ms": 54679,
+      "ok": true
+    },
+    {
+      "harness": "codex",
+      "task": "t4",
+      "repeat": 0,
+      "ms": 300016,
+      "ok": false,
+      "note": "exit=null"
+    },
+    {
+      "harness": "codex",
+      "task": "t4",
+      "repeat": 1,
+      "ms": 37472,
+      "ok": false
+    },
+    {
+      "harness": "pi",
+      "task": "t4",
+      "repeat": 1,
+      "ms": 58645,
+      "ok": true
+    },
+    {
+      "harness": "puck",
+      "task": "t4",
+      "repeat": 1,
+      "ms": 65095,
+      "ok": true,
+      "ttftMs": 860,
+      "inputTokens": 20003,
+      "outputTokens": 2768
+    }
+  ]
+}

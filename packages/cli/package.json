@@ -1,0 +1,51 @@
+{
+	"name": "puck",
+	"version": "0.1.0",
+	"description": "puck CLI — a minimal coding agent built on the puck harness.",
+	"type": "module",
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"bin": {
+		"puck": "./dist/index.js"
+	},
+	"files": [
+		"dist",
+		"README.md"
+	],
+	"sideEffects": false,
+	"keywords": [
+		"ai",
+		"agent",
+		"cli"
+	],
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/puckguo/puck-harness.git",
+		"directory": "packages/cli"
+	},
+	"homepage": "https://github.com/puckguo/puck-harness#readme",
+	"bugs": {
+		"url": "https://github.com/puckguo/puck-harness/issues"
+	},
+	"author": {
+		"name": "puck contributors"
+	},
+	"publishConfig": {
+		"access": "public"
+	},
+	"engines": {
+		"node": ">=22.18.0"
+	},
+	"dependencies": {
+		"@puck-agent/core": "*",
+		"@puck-agent/features": "*",
+		"@puck-agent/llm": "*",
+		"@puck-agent/sdk": "*",
+		"@puck-agent/session": "*",
+		"@puck-agent/tools": "*",
+		"@puck-agent/timing": "*",
+		"@puck-agent/store": "*",
+		"@puck-agent/memory": "*"
+	}
+}
