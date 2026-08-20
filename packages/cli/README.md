@@ -1,13 +1,15 @@
-# `puck` (CLI)
+# puck-harness (CLI)
 
 The `puck` command — a minimal coding agent built on the `@puck-agent/*` SDK.
+
+> npm package name is `puck-harness` (the bare name `puck` was already taken); the installed binary is still `puck`.
 
 ## Install
 
 ```bash
-npm install -g puck
+npm install -g puck-harness
 # or, for one-off use:
-npx puck
+npx puck-harness
 ```
 
 ## Usage
@@ -27,7 +29,7 @@ puck /quit
 ## Try it without an API key
 
 ```bash
-npm install -g puck
+npm install -g puck-harness
 puck --mock
 ```
 

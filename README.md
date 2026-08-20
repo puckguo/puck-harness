@@ -6,11 +6,11 @@
 [![Node ≥ 22.18](https://img.shields.io/badge/node-%E2%89%A522.18-brightgreen)](./package.json)
 [![Tests](https://img.shields.io/badge/tests-150%20pass-success)](./tests)
 [![Zero deps](https://img.shields.io/badge/runtime%20deps-0-blueviolet)](./packages/core)
-[![npm version](https://img.shields.io/npm/v/puck.svg)](https://www.npmjs.com/package/puck)
+[![npm version](https://img.shields.io/npm/v/puck-harness.svg)](https://www.npmjs.com/package/puck-harness)
 [![GitHub stars](https://img.shields.io/github/stars/puckguo/puck-harness)](https://github.com/puckguo/puck-harness)
 
 ```bash
-npm install -g puck                          # CLI
+npm install -g puck-harness                   # CLI
 npm install @puck-agent/core                 # or just the agent loop, no UI
 ```
 
@@ -141,7 +141,7 @@ puck 假设一种用户：**想搞清楚 agent loop 到底怎么工作的人**�
 | [`@puck-agent/memory`](packages/memory) | agent.md 上下文加载 / 经验蒸馏 | core + store |
 | [`@puck-agent/sdk`](packages/sdk) | createPuck() 高层门面 | 全部底层包 |
 | [`@puck-agent/web`](packages/web) | SSE Web 服务 | sdk + 底层 |
-| [`puck`](packages/cli) | CLI 入口（npm bin: `puck`） | 全部 |
+| [`puck-harness`](packages/cli) | CLI 入口（npm: `puck-harness`，bin: `puck`） | 全部 |
 
 ---
 
@@ -150,7 +150,7 @@ puck 假设一种用户：**想搞清楚 agent loop 到底怎么工作的人**�
 ### CLI（推荐大多数人从这里开始）
 
 ```bash
-npm install -g puck
+npm install -g puck-harness
 puck --help
 puck --mock "写一个 hello world"   # 离线 mock，不需要 API key
 ```
