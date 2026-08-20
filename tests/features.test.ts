@@ -9,7 +9,7 @@ import { userMessage } from "@puckguo123/core";
 import { createApprovalGate } from "@puckguo123/features/approval";
 import { compactNow, createCompactionHook } from "@puckguo123/features/compaction";
 import { createSubagentTool } from "@puckguo123/features/subagent";
-import { createSkillTool, loadSkills, skillsToPrompt } from "@puckguo123/features/skills";
+import { createSkillTool, loadAllHarnessSkills, loadSkills, skillsToPrompt } from "@puckguo123/features/skills";
 import { createMockStreamFn } from "@puckguo123/llm";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -130,6 +130,58 @@ test("skills: load from directory and expose via tool", async () => {
 		assert.equal(unknown.isError, true);
 	} finally {
 		rmSync(dir, { recursive: true, force: true });
+	}
+});
+
+test("skills: parses claude/codex YAML frontmatter SKILL.md", async () => {
+	const dir = mkdtempSync(join(tmpdir(), "puck-skills-fm-"));
+	try {
+		// quoted-scalar form (claude)
+		mkdirSync(join(dir, "implement"));
+		writeFileSync(
+			join(dir, "implement", "SKILL.md"),
+			'---\nname: implement\ndescription: "Implement a piece of work based on a PRD."\ndisable-model-invocation: true\n---\n\nImplement the work described in the PRD.',
+		);
+		// block-scalar form (codex kimi-webbridge style)
+		mkdirSync(join(dir, "webbridge"));
+		writeFileSync(
+			join(dir, "webbridge", "SKILL.md"),
+			'---\nname: webbridge\ndescription: |\n  Control the user browser.\n  Navigate, click, screenshot.\n---\n\nBridge docs.',
+		);
+
+		const skills = await loadSkills(dir);
+		assert.equal(skills.length, 2);
+		const impl = skills.find((s) => s.name === "implement");
+		const bridge = skills.find((s) => s.name === "webbridge");
+		assert.ok(impl, "quoted-scalar name parsed");
+		assert.equal(impl.description, "Implement a piece of work based on a PRD.");
+		assert.ok(bridge, "block-scalar name parsed");
+		assert.match(bridge.description, /Control the user browser\./);
+		assert.match(bridge.description, /screenshot/);
+	} finally {
+		rmSync(dir, { recursive: true, force: true });
+	}
+});
+
+test("skills: loadAllHarnessSkills merges harness dirs and dedupes by name", async () => {
+	const home = mkdtempSync(join(tmpdir(), "puck-skills-home-"));
+	try {
+		// same skill name in .claude and .puck → puck wins (first source)
+		mkdirSync(join(home, ".puck", "skills", "deploy"), { recursive: true });
+		writeFileSync(join(home, ".puck", "skills", "deploy", "SKILL.md"), "# deploy\ndescription: puck flavor\n");
+		mkdirSync(join(home, ".claude", "skills", "deploy"), { recursive: true });
+		writeFileSync(join(home, ".claude", "skills", "deploy", "SKILL.md"), "---\nname: deploy\ndescription: claude flavor\n---\n");
+		// claude-only skill is kept
+		mkdirSync(join(home, ".claude", "skills", "review"), { recursive: true });
+		writeFileSync(join(home, ".claude", "skills", "review", "SKILL.md"), "---\nname: review\ndescription: review code\n---\n");
+
+		const skills = await loadAllHarnessSkills(home);
+		const names = skills.map((s) => s.name).sort();
+		assert.deepEqual(names, ["deploy", "review"]);
+		assert.equal(skills.find((s) => s.name === "deploy")?.description, "puck flavor");
+		// missing dirs (.codex/.pi) are skipped silently — no throw, no entries
+	} finally {
+		rmSync(home, { recursive: true, force: true });
 	}
 });
 

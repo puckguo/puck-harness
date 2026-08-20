@@ -18,8 +18,10 @@
 import type { AgentEvent, Message } from "@puckguo123/core";
 import { estimateMessageTokens } from "@puckguo123/core";
 import { compactNow } from "@puckguo123/features/compaction";
+import { createSkillTool, loadAllHarnessSkills, skillsToPrompt, type Skill } from "@puckguo123/features/skills";
 import { createMockStreamFn, createStreamFn, discoverUsableModels, FileCredentialStore, findProvider, listModels, listProviders, loginProvider, logoutProvider, PROVIDERS, resolveApiKey, resolveModel, resolveProviderApiKey } from "@puckguo123/llm";
 import { createPuck, DEFAULT_CODING_PROMPT, getDefaultModel, setDefaultModel } from "@puckguo123/sdk";
+import { createCodingTools } from "@puckguo123/tools";
 import { SessionStore } from "@puckguo123/session";
 import { ConversationStore } from "@puckguo123/store";
 import { IdleTaskScheduler, loadAgentContext, memoryStats, runDailySummary, runLongTermDistill, type ContextSource } from "@puckguo123/memory";
@@ -29,7 +31,7 @@ import { createInterface } from "node:readline";
 import { homedir } from "node:os";
 import { buildBar, renderBar, renderEditDiff, renderToolEnd, SlashPopup, Spinner, TerminalChrome, FileTrail, renderTrail, selectFromList, queryCursorPosition, WorkingTitle, formatTokens, summarizeTurn, QueuedInput, clipCp, renderQueueRows, parseInterject, type SlashCommand, type TurnSummary, type QueueViewState } from "./term.js";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { basename, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { randomUUID } from "node:crypto";
 import { puckDir } from "@puckguo123/llm";
 
@@ -44,6 +46,7 @@ const SLASH_COMMANDS: SlashCommand[] = [
 	{ name: "clear", desc: "清空上下文，开始新对话（原会话保留在磁盘，可 /resume 找回）" },
 	{ name: "resume", desc: "选择一个历史会话继续对话（puck + pi/codex/claude 合并，默认当前项目（含外部会话），a 切全部目录）" },
 	{ name: "memory", desc: "记忆系统：agent.md / experience / 每日总结" },
+	{ name: "skills", desc: "已加载的技能清单（来自 ~/.puck · ~/.claude · ~/.codex · ~/.pi 的 skills 目录）" },
 	{ name: "tasks", desc: "后台任务目录与状态（每日总结等，空闲时运行）" },
 	{ name: "recall", args: "<关键词>", desc: "跨项目搜索历史对话（sqlite 索引）" },
 	{ name: "prompt", desc: "查看系统提示组成：各文件、路径、字数（↑↓ 选择查看内容）" },
@@ -76,21 +79,23 @@ interface CliArgs {
 	model: string;
 	mock: boolean;
 	noMemory: boolean;
+	noSkills: boolean;
 	sessionId?: string;
 	prompt?: string;
 }
 
 function parseArgs(argv: string[]): CliArgs {
-	const args: CliArgs = { model: process.env.PUCK_MODEL ?? getDefaultModel() ?? "", mock: false, noMemory: false };
+	const args: CliArgs = { model: process.env.PUCK_MODEL ?? getDefaultModel() ?? "", mock: false, noMemory: false, noSkills: false };
 	const positional: string[] = [];
 	for (let i = 2; i < argv.length; i++) {
 		const arg = argv[i];
 		if (arg === "--model" || arg === "-m") args.model = argv[++i];
 		else if (arg === "--mock") args.mock = true;
 		else if (arg === "--no-memory") args.noMemory = true;
+		else if (arg === "--no-skills") args.noSkills = true;
 		else if (arg === "--session" || arg === "-s") args.sessionId = argv[++i];
 		else if (arg === "--help" || arg === "-h") {
-			console.log("usage: puck [--model <id>] [--mock] [--session <id>] [--no-memory] [prompt]");
+			console.log("usage: puck [--model <id>] [--mock] [--session <id>] [--no-memory] [--no-skills] [prompt]");
 			console.log("       puck timings [--html] [--analyze] [--model <id>] [--last N] [--clear]");
 			console.log("       puck login [provider]   interactive API key setup");
 			process.exit(0);
@@ -795,6 +800,8 @@ async function handleSlashCommand(
 		onModelChange?: (id: string) => void;
 		onResume?: (id: string, model: string | undefined, stats: { turns: number; compactions: number; title: string }) => Promise<void> | void;
 		memory?: { home: string; store: ConversationStore | null; sources: ContextSource[]; scheduler: IdleTaskScheduler | undefined };
+		skills?: Skill[];
+		args?: { noSkills: boolean };
 	},
 ): Promise<boolean> {
 	const [name, ...rest] = command.slice(1).split(/\s+/);
@@ -921,6 +928,33 @@ async function handleSlashCommand(
 			if (stats.longTerm) console.log(`  长期记忆  ${stats.longTerm.split("\n").length} 行 → long-term.md（每周从日总结蒸馏）`);
 			console.log(`  每日总结  ${stats.summaries.length} 篇${stats.summaries.length ? "（最新 " + stats.summaries[stats.summaries.length - 1] + "）" : ""} → memories/`);
 			console.log("  sqlite 索引  " + (mem.store ? mem.home + "\\index.db" : "不可用（node:sqlite 缺失）"));
+			return true;
+		}
+		case "skills": {
+			// Re-scan on every invocation so newly installed skills (in any
+			// harness's skills dir) show up without a restart — same philosophy
+			// as /memory reload.
+			let live: Skill[];
+			try {
+				live = await loadAllHarnessSkills(homedir());
+			} catch {
+				live = context.skills ?? [];
+			}
+			if (context.args?.noSkills) {
+				console.log("技能未加载（--no-skills）");
+				return true;
+			}
+			if (live.length === 0) {
+				console.log("未发现任何技能。放一个目录到 ~/.puck/skills/<name>/SKILL.md 即可（也读 ~/.claude · ~/.codex · ~/.pi）");
+				return true;
+			}
+			console.log(`技能（${live.length} 个，模型用 skill 工具按需加载）：`);
+			for (const s of live) {
+				// path = <home>/<.claude>/skills/<name>/SKILL.md → origin is 3rd from the end
+				const segs = dirname(s.path).split(/[\\/]/);
+				const origin = segs[segs.length - 3]; // e.g. ".claude"
+				console.log(`  ${s.name}${origin ? COLORS.dim + "（" + origin + "）" + COLORS.reset : ""}${s.description ? " — " + s.description.slice(0, 100) : ""}`);
+			}
 			return true;
 		}
 		case "prompt": {
@@ -1373,6 +1407,28 @@ async function main(): Promise<void> {
 		}
 	}
 
+	// --- skills layer -------------------------------------------------------
+	// Every harness on this machine gets a chance: ~/.puck/skills first, then
+	// ~/.claude, ~/.codex, ~/.pi — so a skill installed for Claude Code or Codex
+	// works in puck with zero copying. Skills are exposed as an on-demand `skill`
+	// tool (descriptions live in the system prompt, full instructions load on
+	// call) — cheap context, same discovery model as pi/claude.
+	// Failures degrade to "no skills"; they never block the REPL.
+	let skills: Skill[] = [];
+	if (!args.noSkills) {
+		try {
+			skills = await loadAllHarnessSkills(homedir());
+		} catch {
+			skills = [];
+		}
+	}
+	const skillTool = createSkillTool(skills);
+	const skillPrompt = skillsToPrompt(skills);
+	if (skills.length > 0) {
+		console.log(COLORS.dim + `技能: ${skills.length} 个（来自 ~/.puck · ~/.claude · ~/.codex · ~/.pi 的 skills 目录，/skills 查看）` + COLORS.reset);
+	}
+	const fullAgentContext = agentContext + skillPrompt;
+
 	// Mutable runtime: /resume swaps the puck instance (agent + session) while
 	// the REPL, renderer, chrome and collectors stay alive.
 	const SESSIONS_DIR = ".puck/sessions";
@@ -1390,17 +1446,21 @@ async function main(): Promise<void> {
 		},
 	});
 	const timingStore = new TimingStore();
+	// coding tools + the `skill` loader tool (skill tool is added even with zero
+	// skills — it answers "no skills available" instead of the model hallucinating
+	// a tool that isn't wired)
+	const cliTools = [...createCodingTools(), skillTool];
 	const runtime = {
 		puck: createPuck({
 			model: args.mock ? "mock" : (modelId || "mock"),
 			streamFn: args.mock ? createMockStreamFn(MOCK_SCRIPT) : undefined,
-			tools: "coding",
+			tools: cliTools,
 			// cwd does double duty: tool paths resolve against it AND the session
 			// header records it, which is what /resume's cwd filter keys on
 			cwd: process.cwd(),
 			session: { dir: SESSIONS_DIR, id: args.sessionId },
 			credentials,
-			agentContext,
+			agentContext: fullAgentContext,
 		}),
 	};
 	runtime.puck.subscribe(renderer);
@@ -1420,13 +1480,13 @@ async function main(): Promise<void> {
 		const next = createPuck({
 			model: args.mock ? "mock" : (effective ?? modelId ?? "mock"),
 			streamFn: args.mock ? createMockStreamFn(MOCK_SCRIPT) : undefined,
-			tools: "coding",
+			tools: cliTools,
 			// new session files created by /clear get the same cwd stamp as fresh
 			// starts, so they stay findable by /resume's cwd filter
 			cwd: process.cwd(),
 			session: { dir: SESSIONS_DIR, id: sessionId },
 			credentials,
-			agentContext,
+			agentContext: fullAgentContext,
 		});
 		next.subscribe(renderer);
 		attachCollector(next);
@@ -1749,6 +1809,8 @@ async function main(): Promise<void> {
 				credentials,
 				mock: args.mock,
 				memory: { home, store: conversationStore, sources: memorySources, scheduler },
+				skills,
+				args,
 				thinking: {
 					get: () => thinkingEffort,
 					set: (e) => {

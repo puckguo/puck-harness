@@ -61,6 +61,7 @@ import { createPuck } from "@puckguo123/sdk";
 | 子进程沙箱 | 不强加 | 不强加 | **强制**（Linux Landlock） | 不强加 | 强制（macOS sbpl） |
 | 跨 harness 导入会话 | **pi / claude / codex** | 无 | 无 | 无 | 无 |
 | 持久记忆（经验/长期） | **有**（自动蒸馏 + 空闲后台任务） | agent.md 上下文 | 无 | 无 | CLAUDE.md 上下文 |
+| 技能系统 | **跨 harness 互认**（读 ~/.puck·~/.claude·~/.codex·~/.pi 的 skills） | 有 | 有 | 有 | 有（闭源格式） |
 | 上一轮总结常驻底栏 | **有**（标题+一句话+文件足迹） | 无 | 无 | 无 | 无 |
 | 会话格式 | 追加式 JSONL | JSONL | JSONL | JSONL | JSONL |
 | 协议层 | `AgentEvent` 流 + `StreamFn` | `StreamFn` | OpenAI 协议 | OpenAI 协议 | Anthropic SDK |

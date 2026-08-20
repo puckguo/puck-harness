@@ -281,14 +281,22 @@ createPuck({ model: "MiniMax-M3", tools: [agentTool] });
 ### 技能（可复用指令包）
 
 ```ts
-import { createSkillTool, loadSkills, skillsToPrompt } from "@puckguo123/features/skills";
+import { createSkillTool, loadSkills, loadAllHarnessSkills, skillsToPrompt } from "@puckguo123/features/skills";
 
 const skills = await loadSkills("./skills");   // 每个子目录一个 SKILL.md
 // 方式 A：全部注入 system prompt（模型直接知道怎么做）
 createPuck({ model: "MiniMax-M3", systemPrompt: base + skillsToPrompt(skills) });
 // 方式 B：按需加载（省上下文，模型自己决定读哪个技能）
 createPuck({ model: "MiniMax-M3", tools: [createSkillTool(skills)] });
+
+// 跨 harness：一次读遍 ~/.puck / ~/.claude / ~/.codex / ~/.pi 的 skills 目录
+// （同名去重，puck 优先）—— 给 Claude Code 装的技能在 puck 里直接能用
+const all = await loadAllHarnessSkills();
 ```
+
+**SKILL.md 两种头部都支持**：puck 原生（首行 `# name` + `description:` 行）与 claude/codex 的 YAML frontmatter（`---` 包裹的 `name:`/`description:`，含引号与块标量写法）。
+
+**CLI 默认开启**：启动时自动加载上述四个目录的全部技能，描述进 system prompt、正文经 `skill` 工具按需加载；`/skills` 查看清单（含来源标注，每次重扫免重启），`--no-skills` 关闭。
 
 ### 自定义模型端点（ollama / vllm / openrouter / 任何 OpenAI 兼容）
 
