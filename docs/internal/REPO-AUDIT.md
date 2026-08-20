@@ -56,7 +56,7 @@
 - ❌ = 完全缺失
 - N/A = 不需要
 
-| 字段 | puck | @puck-agent/core | sdk | session | llm | tools | features | web | store | memory | timing |
+| 字段 | puck | @puckguo123/core | sdk | session | llm | tools | features | web | store | memory | timing |
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | `name` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | `version` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
@@ -81,15 +81,15 @@
 
 1. **所有 package.json 都没有 `repository` / `homepage` / `bugs` / `author`**
    → npmjs.com 上的包页面会显示 "no homepage / no repo"，GitHub star / issue 入口失效
-2. **`@puck-agent/store` 和 `@puck-agent/memory` 完全没有 `files` 字段**
+2. **`@puckguo123/store` 和 `@puckguo123/memory` 完全没有 `files` 字段**
    → `npm publish` 会把整个目录（含 src/、tsconfig.json）都打包进去
 3. **这两个包也没有 `license`**
    → npm 会警告（不阻断）
 4. **所有包都声明了 `files: ["README.md"]`，但只有 `web` 实际有 README**
    → 其他包的 npm 页面会显示 "no readme"
-5. **`@puck-agent/store` 和 `@puck-agent/memory` 用 `workspace:*`，其他包用 `0.1.0` 写死**
+5. **`@puckguo123/store` 和 `@puckguo123/memory` 用 `workspace:*`，其他包用 `0.1.0` 写死**
    → 需要统一改成 `^0.1.0`（发布后用户装的版本范围必须兼容）
-6. **`@puck-agent/features` 完全没有 `main` / `types` 字段**
+6. **`@puckguo123/features` 完全没有 `main` / `types` 字段**
    → 只有 `exports`，对老式 bundler 不友好，但 Node 22 用 ESM 是 OK 的
 
 ---

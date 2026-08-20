@@ -4,13 +4,13 @@
 
 import assert from "node:assert/strict";
 import test from "node:test";
-import type { AssistantMessage, Message, Tool } from "@puck-agent/core";
-import { userMessage } from "@puck-agent/core";
-import { createApprovalGate } from "@puck-agent/features/approval";
-import { compactNow, createCompactionHook } from "@puck-agent/features/compaction";
-import { createSubagentTool } from "@puck-agent/features/subagent";
-import { createSkillTool, loadSkills, skillsToPrompt } from "@puck-agent/features/skills";
-import { createMockStreamFn } from "@puck-agent/llm";
+import type { AssistantMessage, Message, Tool } from "@puckguo123/core";
+import { userMessage } from "@puckguo123/core";
+import { createApprovalGate } from "@puckguo123/features/approval";
+import { compactNow, createCompactionHook } from "@puckguo123/features/compaction";
+import { createSubagentTool } from "@puckguo123/features/subagent";
+import { createSkillTool, loadSkills, skillsToPrompt } from "@puckguo123/features/skills";
+import { createMockStreamFn } from "@puckguo123/llm";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";

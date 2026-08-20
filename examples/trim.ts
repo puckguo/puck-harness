@@ -4,8 +4,8 @@
  * 运行: node --experimental-strip-types examples/trim.ts
  */
 
-import { createPuck } from "@puck-agent/sdk";
-import { createMockStreamFn } from "@puck-agent/llm";
+import { createPuck } from "@puckguo123/sdk";
+import { createMockStreamFn } from "@puckguo123/llm";
 
 // ── 形态 1：全功能（工具 + 会话持久化 + 审批）─────────────────────────
 const full = createPuck({

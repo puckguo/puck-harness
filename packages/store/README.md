@@ -1,17 +1,17 @@
-# @puck-agent/store
+# @puckguo123/store
 
 Local conversation index — a single sqlite file in the system dir (`PUCK_HOME` or `~/.puck`).
 
 ## Install
 
 ```bash
-npm install @puck-agent/store @puck-agent/core
+npm install @puckguo123/store @puckguo123/core
 ```
 
 ## Quick start
 
 ```ts
-import { ConversationIndex } from "@puck-agent/store";
+import { ConversationIndex } from "@puckguo123/store";
 
 const index = new ConversationIndex();
 index.upsert({

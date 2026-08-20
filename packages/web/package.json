@@ -1,5 +1,5 @@
 {
-	"name": "@puck-agent/web",
+	"name": "@puckguo123/web",
 	"version": "0.1.0",
 	"description": "puck web client — SSE server exposing the puck harness to a browser UI.",
 	"type": "module",
@@ -52,11 +52,11 @@
 		"node": ">=22.18.0"
 	},
 	"dependencies": {
-		"@puck-agent/core": "*",
-		"@puck-agent/features": "*",
-		"@puck-agent/llm": "*",
-		"@puck-agent/sdk": "*",
-		"@puck-agent/session": "*",
-		"@puck-agent/tools": "*"
+		"@puckguo123/core": "*",
+		"@puckguo123/features": "*",
+		"@puckguo123/llm": "*",
+		"@puckguo123/sdk": "*",
+		"@puckguo123/session": "*",
+		"@puckguo123/tools": "*"
 	}
 }

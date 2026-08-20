@@ -1,5 +1,5 @@
 /** Final browser-visible check: real server, real HTTP, verify the page + picker data end-to-end. */
-import { createWebServer } from "@puck-agent/web";
+import { createWebServer } from "@puckguo123/web";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";

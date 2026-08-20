@@ -1,4 +1,4 @@
-# @puck-agent/tools
+# @puckguo123/tools
 
 Built-in tools for coding agents: `bash`, `read`, `write`, `edit`, `truncate`. **Zero dependencies.**
 
@@ -7,26 +7,26 @@ Each tool is a standalone module that you can import directly (or use the bundle
 ## Install
 
 ```bash
-npm install @puck-agent/tools @puck-agent/core
+npm install @puckguo123/tools @puckguo123/core
 ```
 
 ## Subpaths
 
 | Subpath | What it does |
 |---|---|
-| `@puck-agent/tools` | The default set: bash + read + write + edit + truncate |
-| `@puck-agent/tools/bash` | Just `bash` |
-| `@puck-agent/tools/read` | Just `read` |
-| `@puck-agent/tools/write` | Just `write` |
-| `@puck-agent/tools/edit` | Just `edit` (string-replace) |
-| `@puck-agent/tools/truncate` | Truncate a tool result mid-stream |
+| `@puckguo123/tools` | The default set: bash + read + write + edit + truncate |
+| `@puckguo123/tools/bash` | Just `bash` |
+| `@puckguo123/tools/read` | Just `read` |
+| `@puckguo123/tools/write` | Just `write` |
+| `@puckguo123/tools/edit` | Just `edit` (string-replace) |
+| `@puckguo123/tools/truncate` | Truncate a tool result mid-stream |
 
 ## Quick start
 
 ```ts
-import { Agent } from "@puck-agent/core";
-import { codingTools } from "@puck-agent/tools";
-// or: import { bashTool, readTool, writeTool, editTool } from "@puck-agent/tools";
+import { Agent } from "@puckguo123/core";
+import { codingTools } from "@puckguo123/tools";
+// or: import { bashTool, readTool, writeTool, editTool } from "@puckguo123/tools";
 
 const agent = new Agent({
   stream: myStreamFn,
@@ -37,10 +37,10 @@ const agent = new Agent({
 
 ## Customizing
 
-Each tool is a plain object that implements the `Tool` interface from `@puck-agent/core`:
+Each tool is a plain object that implements the `Tool` interface from `@puckguo123/core`:
 
 ```ts
-import { bashTool } from "@puck-agent/tools/bash";
+import { bashTool } from "@puckguo123/tools/bash";
 
 const myBash = {
   ...bashTool,

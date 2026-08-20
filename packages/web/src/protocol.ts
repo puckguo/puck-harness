@@ -13,12 +13,12 @@
  * Every SSE payload is one JSON object per `data:` line. Two families:
  *
  *   1. passthrough AgentEvents (message_update, tool_start, …) — the exact
- *      same discriminated union defined in @puck-agent/core, rendered live.
+ *      same discriminated union defined in @puckguo123/core, rendered live.
  *   2. server-side lifecycle events (done/error/notice) — added by this
  *      server to bracket a run over the wire.
  */
 
-import type { AgentEvent } from "@puck-agent/core";
+import type { AgentEvent } from "@puckguo123/core";
 
 /** Passthrough events keep their core shape; only lifecycle wrappers are new. */
 export type WebEvent =

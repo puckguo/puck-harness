@@ -1,11 +1,11 @@
-# @puck-agent/timing
+# @puckguo123/timing
 
 Per-turn model latency metrics, JSONL store, HTML dashboard, and LLM-based sanity analysis. **Zero dependencies.**
 
 ## Install
 
 ```bash
-npm install @puck-agent/timing @puck-agent/core
+npm install @puckguo123/timing @puckguo123/core
 ```
 
 ## What it records
@@ -18,7 +18,7 @@ npm install @puck-agent/timing @puck-agent/core
 ## Quick start
 
 ```ts
-import { TimingRecorder } from "@puck-agent/timing";
+import { TimingRecorder } from "@puckguo123/timing";
 
 const rec = new TimingRecorder(".puck/timings.jsonl");
 rec.record({

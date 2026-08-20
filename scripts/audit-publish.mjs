@@ -211,7 +211,7 @@ for (const pkgName of pkgs) {
 	//   ^x.y.z       = OK
 	//   x.y.z 写死   = 警告（inter-package 依赖不锁定）
 	for (const [dep, ver] of Object.entries({ ...(pkg.dependencies || {}), ...(pkg.peerDependencies || {}) })) {
-		if (!dep.startsWith("@puck-agent/")) continue;
+		if (!dep.startsWith("@puckguo123/")) continue;
 		if (ver === "workspace:*" || ver === "*") {
 			ok(`  ${label} 互依赖 ${dep}: ${ver}（publish 时会转为 ^x.y.z）`);
 		} else if (/^\^?\d+\.\d+\.\d+$/.test(ver)) {

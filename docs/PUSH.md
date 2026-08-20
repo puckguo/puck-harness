@@ -75,7 +75,7 @@ cd packages/cli && npm publish --access public && cd ../..
 
 Verify each step:
 ```bash
-npm view @puck-agent/core version   # should show 0.1.0
+npm view @puckguo123/core version   # should show 0.1.0
 npm view puck version
 ```
 

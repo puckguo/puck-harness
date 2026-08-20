@@ -61,7 +61,7 @@
 
 ### B2. 互依赖版本号升级
 
-11 个 package.json 里的 `@puck-agent/*` 依赖：
+11 个 package.json 里的 `@puckguo123/*` 依赖：
 - 写死 `0.1.0` → 改成 `^0.1.0`
 - `workspace:*` → 改成 `^0.1.0`
 
@@ -71,7 +71,7 @@
 
 ### B3. `keywords` 字段补全
 
-`@puck-agent/store` 和 `@puck-agent/memory` 缺 keywords：
+`@puckguo123/store` 和 `@puckguo123/memory` 缺 keywords：
 
 ```jsonc
 "keywords": ["ai", "agent", "storage", "kv"]
@@ -83,11 +83,11 @@
 
 ### B4. `license: "MIT"` 补全
 
-`@puck-agent/store` 和 `@puck-agent/memory` 缺 license。
+`@puckguo123/store` 和 `@puckguo123/memory` 缺 license。
 
 ### B5. `files` 字段补全
 
-`@puck-agent/store` 和 `@puck-agent/memory` 缺 files，建议：
+`@puckguo123/store` 和 `@puckguo123/memory` 缺 files，建议：
 
 ```jsonc
 "files": ["dist", "README.md"]
@@ -149,16 +149,16 @@ npx changeset init
 ```md
 ---
 "puck": major
-"@puck-agent/core": major
-"@puck-agent/sdk": major
-"@puck-agent/session": major
-"@puck-agent/llm": major
-"@puck-agent/tools": major
-"@puck-agent/features": major
-"@puck-agent/web": major
-"@puck-agent/store": major
-"@puck-agent/memory": major
-"@puck-agent/timing": major
+"@puckguo123/core": major
+"@puckguo123/sdk": major
+"@puckguo123/session": major
+"@puckguo123/llm": major
+"@puckguo123/tools": major
+"@puckguo123/features": major
+"@puckguo123/web": major
+"@puckguo123/store": major
+"@puckguo123/memory": major
+"@puckguo123/timing": major
 ---
 
 Initial public release of puck — a minimal, trimmable agent harness.
@@ -251,8 +251,8 @@ jobs:
    # 在临时空目录里：
    npm install puck
    npx puck --help
-   npm install @puck-agent/core
-   node -e "import('@puck-agent/core').then(m => console.log(Object.keys(m)))"
+   npm install @puckguo123/core
+   node -e "import('@puckguo123/core').then(m => console.log(Object.keys(m)))"
    ```
 
 ---

@@ -7,7 +7,7 @@ import test from "node:test";
 import { appendFileSync, existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { Session, SessionStore } from "@puck-agent/session";
+import { Session, SessionStore } from "@puckguo123/session";
 
 function makeTmpDir(): string {
 	return mkdtempSync(join(tmpdir(), "puck-session-"));

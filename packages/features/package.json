@@ -1,5 +1,5 @@
 {
-	"name": "@puck-agent/features",
+	"name": "@puckguo123/features",
 	"version": "0.1.0",
 	"description": "puck optional features: compaction, subagent, skills, approval. Each subpath is independent and deletable.",
 	"type": "module",
@@ -55,6 +55,6 @@
 		"node": ">=22.18.0"
 	},
 	"dependencies": {
-		"@puck-agent/core": "*"
+		"@puckguo123/core": "*"
 	}
 }

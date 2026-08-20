@@ -5,9 +5,9 @@
  * 零网络依赖 —— mock 每步都固定，适合断点单步、回归测试、CI。
  */
 
-import { Agent } from "@puck-agent/core";
-import { createCodingTools } from "@puck-agent/tools";
-import { createMockStreamFn, type MockStep } from "@puck-agent/llm";
+import { Agent } from "@puckguo123/core";
+import { createCodingTools } from "@puckguo123/tools";
+import { createMockStreamFn, type MockStep } from "@puckguo123/llm";
 import { mkdirSync, rmSync } from "node:fs";
 
 // 1) 准备一个干净的工作目录

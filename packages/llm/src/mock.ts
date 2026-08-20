@@ -16,8 +16,8 @@ import type {
 	ThinkingContent,
 	ToolCall,
 	Usage,
-} from "@puck-agent/core";
-import { EMPTY_USAGE } from "@puck-agent/core";
+} from "@puckguo123/core";
+import { EMPTY_USAGE } from "@puckguo123/core";
 import { chunkText, createAssistantStream, errorMessage } from "./stream-utils.js";
 
 export interface MockToolCall {

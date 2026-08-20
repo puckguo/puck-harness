@@ -9,10 +9,10 @@
 
 import assert from "node:assert/strict";
 import test from "node:test";
-import type { Tool } from "@puck-agent/core";
-import { Agent } from "@puck-agent/core";
-import { createStreamFn, getModel, splitThinkTags } from "@puck-agent/llm";
-import { createPuck } from "@puck-agent/sdk";
+import type { Tool } from "@puckguo123/core";
+import { Agent } from "@puckguo123/core";
+import { createStreamFn, getModel, splitThinkTags } from "@puckguo123/llm";
+import { createPuck } from "@puckguo123/sdk";
 
 const API_KEY = process.env.MINIMAX_API_KEY;
 const MODEL_ID = "MiniMax-M3";

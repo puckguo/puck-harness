@@ -33,7 +33,7 @@ npm notice 88B dist/.puck/sessions/b65907ce-5eae-4038-932e-80d7b3921db8.jsonl
 
 修复：临时清理 + 让 CLI 测试用 `os.tmpdir()` 作为 session dir。
 
-### 🔴 严重：`@puck-agent/store` 没有 `files` 字段
+### 🔴 严重：`@puckguo123/store` 没有 `files` 字段
 
 ```
 $ npm pack --dry-run

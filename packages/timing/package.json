@@ -1,5 +1,5 @@
 {
-	"name": "@puck-agent/timing",
+	"name": "@puckguo123/timing",
 	"version": "0.1.0",
 	"description": "puck timing: per-turn model latency metrics, JSONL store, HTML dashboard, LLM-based sanity analysis. Zero dependencies.",
 	"type": "module",
@@ -44,6 +44,6 @@
 		"node": ">=22.18.0"
 	},
 	"dependencies": {
-		"@puck-agent/core": "*"
+		"@puckguo123/core": "*"
 	}
 }

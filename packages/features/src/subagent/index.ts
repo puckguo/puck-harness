@@ -6,8 +6,8 @@
  * removing the folder (plus its exports entry) leaves the rest intact.
  */
 
-import type { Agent, StreamFn, Tool, ToolResult } from "@puck-agent/core";
-import { Agent as AgentClass } from "@puck-agent/core";
+import type { Agent, StreamFn, Tool, ToolResult } from "@puckguo123/core";
+import { Agent as AgentClass } from "@puckguo123/core";
 
 export interface SubagentOptions {
 	/** Stream function for the nested agent (usually the parent's). */

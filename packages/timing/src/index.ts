@@ -1,5 +1,5 @@
 /**
- * @puck-agent/timing — per-turn model latency metrics for puck.
+ * @puckguo123/timing — per-turn model latency metrics for puck.
  *
  * Collector (event-driven) → TimingStore (JSONL) → dashboard (self-contained
  * HTML) / aggregate stats / LLM sanity analysis. Depends only on core types.

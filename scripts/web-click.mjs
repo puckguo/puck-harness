@@ -2,7 +2,7 @@
  * Click-through check: header model label click → modal opens with catalog.
  * Uses classList with real semantics (add/remove/contains).
  */
-import { createWebServer } from "@puck-agent/web";
+import { createWebServer } from "@puckguo123/web";
 import { readFileSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";

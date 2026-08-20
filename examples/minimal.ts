@@ -4,9 +4,9 @@
  * 运行: node --experimental-strip-types examples/minimal.ts
  */
 
-import { Agent } from "@puck-agent/core";
-import type { Tool } from "@puck-agent/core";
-import { createMockStreamFn } from "@puck-agent/llm";
+import { Agent } from "@puckguo123/core";
+import type { Tool } from "@puckguo123/core";
+import { createMockStreamFn } from "@puckguo123/llm";
 
 const weatherTool: Tool = {
 	name: "get_weather",

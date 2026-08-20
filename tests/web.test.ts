@@ -3,7 +3,7 @@
  * (zero network), Node's built-in test runner. Mirrors tests/sdk.test.ts.
  */
 
-import { createWebServer } from "@puck-agent/web";
+import { createWebServer } from "@puckguo123/web";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -140,7 +140,7 @@ describe("web server (mock)", () => {
 		assert.equal(res.status, 200);
 		const body = await res.text();
 		assert.ok(body.includes("puck"), "served the SPA entry, not a real file");
-		assert.ok(!body.includes('"name": "@puck-agent/web"'), "no package.json contents leaked");
+		assert.ok(!body.includes('"name": "@puckguo123/web"'), "no package.json contents leaked");
 	});
 
 	it("unknown API paths 404 with JSON", async () => {

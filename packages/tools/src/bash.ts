@@ -2,7 +2,7 @@
  * bash tool — run a shell command, capture combined output, truncate the tail.
  */
 
-import type { Tool, ToolResult } from "@puck-agent/core";
+import type { Tool, ToolResult } from "@puckguo123/core";
 import { spawn } from "node:child_process";
 import { truncateTail } from "./truncate.js";
 

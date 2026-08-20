@@ -65,7 +65,7 @@ packages/
 
 ## Adding a new feature (subpath)
 
-For features that should be independently deletable (e.g. a new `approval` flow), prefer adding a subpath under `@puck-agent/features/`:
+For features that should be independently deletable (e.g. a new `approval` flow), prefer adding a subpath under `@puckguo123/features/`:
 ```jsonc
 "exports": {
   "./approval": {
@@ -79,7 +79,7 @@ For features that should be independently deletable (e.g. a new `approval` flow)
 
 - TypeScript strict mode, ESM-only, no CommonJS
 - Zero new runtime deps unless absolutely necessary (puck prides itself on being auditable)
-- Public API changes go through `@puck-agent/sdk`; lower-level packages (`core`, `llm`, `session`, `tools`) should stay small
+- Public API changes go through `@puckguo123/sdk`; lower-level packages (`core`, `llm`, `session`, `tools`) should stay small
 - Comments explain *why*, not *what*
 
 ## Release process

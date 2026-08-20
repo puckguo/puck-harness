@@ -8,16 +8,16 @@
 - **版本**：11 个 packages 全部 `0.1.0`
 - **包结构**（npm workspaces monorepo）：
   - `puck` （CLI，安装后 bin 为 `puck` 命令）
-  - `@puck-agent/core` （零依赖核心，agent loop + message model）
-  - `@puck-agent/sdk` （高层 createPuck 入口）
-  - `@puck-agent/llm` （OpenAI/Anthropic 适配器）
-  - `@puck-agent/session` （JSONL 会话持久化 + 跨 harness 导入）
-  - `@puck-agent/features` （compaction / subagent / 思考轮转等可裁切特性）
-  - `@puck-agent/tools` （bash/read/write/edit）
-  - `@puck-agent/store` （本地 key-value 存储）
-  - `@puck-agent/memory` （索引数据库）
-  - `@puck-agent/timing` （轮转时长统计）
-  - `@puck-agent/web` （可选 Web UI）
+  - `@puckguo123/core` （零依赖核心，agent loop + message model）
+  - `@puckguo123/sdk` （高层 createPuck 入口）
+  - `@puckguo123/llm` （OpenAI/Anthropic 适配器）
+  - `@puckguo123/session` （JSONL 会话持久化 + 跨 harness 导入）
+  - `@puckguo123/features` （compaction / subagent / 思考轮转等可裁切特性）
+  - `@puckguo123/tools` （bash/read/write/edit）
+  - `@puckguo123/store` （本地 key-value 存储）
+  - `@puckguo123/memory` （索引数据库）
+  - `@puckguo123/timing` （轮转时长统计）
+  - `@puckguo123/web` （可选 Web UI）
 - **缺失项**：
   - ❌ 无 `.git` — 仓库尚未初始化
   - ❌ 无 `LICENSE` — 开源必备
@@ -34,17 +34,17 @@ CLI 包名 `puck` 是个**热门单字**，很可能会在 npm 上冲突。需�
 | 选项 | 优点 | 风险 |
 |---|---|---|
 | **A. 保留 `puck`** | 简洁、CLI 命令就是 `puck` | 很可能已被占用；需要 `npm view puck` 验证 |
-| **B. `@puck-agent/cli`** + CLI 命令改名（如 `puck-agent`） | 命名空间安全，包名清晰 | 命令变长 |
+| **B. `@puckguo123/cli`** + CLI 命令改名（如 `puck-agent`） | 命名空间安全，包名清晰 | 命令变长 |
 | **C. 自命名空间（如 `@你的组织/puck`）** | 完全可控 | 需要 npm org 账号 |
 
-**我的建议**：先用 `npm view puck` 验证是否可用；如已被占用，回退到 `@puck-agent/cli`（bin 名仍叫 `puck`，命令体验不变）。
+**我的建议**：先用 `npm view puck` 验证是否可用；如已被占用，回退到 `@puckguo123/cli`（bin 名仍叫 `puck`，命令体验不变）。
 
 ### 2. 发布范围（关键决策）
 
 | 选项 | 说明 | 适用场景 |
 |---|---|---|
 | **A. 只发 puck CLI** | 11 个 packages 合并发布为一个 fat npm 包 | 用户只需要 CLI，不在乎底层架构 |
-| **B. 发 CLI + 公共子包** | `@puck-agent/core` / `sdk` / `session` 等零依赖/低依赖包也发布 | 用户可以 `import { Agent } from "@puck-agent/core"` 直接集成到自己的 app（puck 定位是 "trimmable harness"，这种用法很重要） |
+| **B. 发 CLI + 公共子包** | `@puckguo123/core` / `sdk` / `session` 等零依赖/低依赖包也发布 | 用户可以 `import { Agent } from "@puckguo123/core"` 直接集成到自己的 app（puck 定位是 "trimmable harness"，这种用法很重要） |
 | **C. 11 个包全部独立发布** | 完整 monorepo 发布 | 树摇最大化，但需要 `changesets`/`release-please` 等管理工具 |
 
 **我的建议**：B（CLI + 5 个核心子包：core/sdk/llm/session/tools；features/web/store/memory/timing 保持私有或下个版本再考虑）。理由：
@@ -107,7 +107,7 @@ CLI 包名 `puck` 是个**热门单字**，很可能会在 npm 上冲突。需�
    - `bugs` 字段（issue tracker URL）
    - `author` 字段（你的名字 + email）
    - `publishConfig: { access: "public" }`
-   - 互相依赖：`@puck-agent/sdk: 0.1.0` 改为 `^0.1.0`，避免 npm 把同 workspace 包当成 file: 引用
+   - 互相依赖：`@puckguo123/sdk: 0.1.0` 改为 `^0.1.0`，避免 npm 把同 workspace 包当成 file: 引用
 2. 验证：`npm run build && npm pack --dry-run` 看每个包会被发布的文件清单（**关键步骤**：catch 哪些私货会被泄漏）
 
 ### Phase 3：自动化

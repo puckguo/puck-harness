@@ -7,8 +7,8 @@ import test from "node:test";
 import { mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { Agent } from "@puck-agent/core";
-import type { AgentEvent } from "@puck-agent/core";
+import { Agent } from "@puckguo123/core";
+import type { AgentEvent } from "@puckguo123/core";
 import {
 	createMockStreamFn,
 	FileCredentialStore,
@@ -18,7 +18,7 @@ import {
 	loginProvider,
 	logoutProvider,
 	resolveApiKey,
-} from "@puck-agent/llm";
+} from "@puckguo123/llm";
 
 function makeStorePath(): string {
 	return join(mkdtempSync(join(tmpdir(), "puck-auth-")), "auth.json");
@@ -149,7 +149,7 @@ test("Agent: setModel swaps streamFn and emits model_update", async () => {
 });
 
 test("SDK: setModel switches mid-session and credentials flow through", async () => {
-	const { createPuck } = await import("@puck-agent/sdk");
+	const { createPuck } = await import("@puckguo123/sdk");
 	const store = new FileCredentialStore(makeStorePath());
 
 	const puck = createPuck({

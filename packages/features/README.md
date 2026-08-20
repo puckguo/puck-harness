@@ -1,28 +1,28 @@
-# @puck-agent/features
+# @puckguo123/features
 
 Optional, independently-deletable agent features. Each subpath is a self-contained module — if you don't need `compaction`, don't import `./compaction`, and `npm prune` won't keep it.
 
 ## Install
 
 ```bash
-npm install @puck-agent/features @puck-agent/core
+npm install @puckguo123/features @puckguo123/core
 ```
 
 ## Subpaths
 
 | Subpath | What it does |
 |---|---|
-| `@puck-agent/features/compaction` | Token-budgeted message compaction (lossless; preserves tool calls and decisions) |
-| `@puck-agent/features/subagent` | Spawn child agents (for "use opus to refactor this file" patterns) |
-| `@puck-agent/features/skills` | Markdown skill loading — `agent.md` files in cwd or `~/.puck/skills/` |
-| `@puck-agent/features/approval` | Pre-tool-execution approval prompt (for high-risk bash commands) |
+| `@puckguo123/features/compaction` | Token-budgeted message compaction (lossless; preserves tool calls and decisions) |
+| `@puckguo123/features/subagent` | Spawn child agents (for "use opus to refactor this file" patterns) |
+| `@puckguo123/features/skills` | Markdown skill loading — `agent.md` files in cwd or `~/.puck/skills/` |
+| `@puckguo123/features/approval` | Pre-tool-execution approval prompt (for high-risk bash commands) |
 
 ## Quick start
 
 ```ts
-import { Agent } from "@puck-agent/core";
-import { createPuck } from "@puck-agent/sdk";
-import { applyCompaction } from "@puck-agent/features/compaction";
+import { Agent } from "@puckguo123/core";
+import { createPuck } from "@puckguo123/sdk";
+import { applyCompaction } from "@puckguo123/features/compaction";
 
 const puck = createPuck({
   model: "deepseek-chat",
@@ -41,7 +41,7 @@ The whole point of this package is that each subpath is independent. If you only
 
 ```ts
 // minimal: only compaction
-import { applyCompaction } from "@puck-agent/features/compaction";
+import { applyCompaction } from "@puckguo123/features/compaction";
 ```
 
 The other features won't be in your `node_modules` if you don't import them.

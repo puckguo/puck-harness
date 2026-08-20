@@ -1,5 +1,5 @@
 {
-	"name": "@puck-agent/store",
+	"name": "@puckguo123/store",
 	"version": "0.1.0",
 	"description": "puck conversation index — single sqlite file in the system dir",
 	"type": "module",
@@ -46,7 +46,7 @@
 		"build": "tsc -b"
 	},
 	"dependencies": {
-		"@puck-agent/core": "*"
+		"@puckguo123/core": "*"
 	},
 	"devDependencies": {
 		"typescript": "^5.9.3"

@@ -11,11 +11,11 @@
 
 ```bash
 npm install -g puck-harness                   # CLI
-npm install @puck-agent/core                 # or just the agent loop, no UI
+npm install @puckguo123/core                 # or just the agent loop, no UI
 ```
 
 ```ts
-import { createPuck } from "@puck-agent/sdk";
+import { createPuck } from "@puckguo123/sdk";
 const puck = createPuck({ model: "deepseek-chat", tools: "coding" });
 const { text } = await puck.run("解释一下这个仓库");
 ```
@@ -36,10 +36,10 @@ If you've used `pi`, `codex`, `DeepSeek Harness`, or `Claude Code CLI`, you know
 
 ```ts
 // Minimal: just the agent loop, no LLM wiring
-import { Agent } from "@puck-agent/core";
+import { Agent } from "@puckguo123/core";
 
 // Or one-call setup with everything
-import { createPuck } from "@puck-agent/sdk";
+import { createPuck } from "@puckguo123/sdk";
 ```
 
 ---
@@ -85,7 +85,7 @@ puck 假设一种用户：**想搞清楚 agent loop 到底怎么工作的人**�
 2. **零依赖**——`Agent` 类只依赖 Node 标准库
 3. **mock provider**——`createMockStreamFn([{text:"hello"}])` 跑通完整 e2e，零网络
 4. **按目录删**——`rm -rf packages/features/src/subagent` 然后 `tsc -b`，构建依然通过
-5. **每个包都能独立装**——`npm install @puck-agent/core` 就能在自己项目里嵌入 agent loop
+5. **每个包都能独立装**——`npm install @puckguo123/core` 就能在自己项目里嵌入 agent loop
 
 ### 什么时候**不**用 puck
 
@@ -98,7 +98,7 @@ puck 假设一种用户：**想搞清楚 agent loop 到底怎么工作的人**�
 ### 什么时候**用** puck
 
 - **教学**：让学生读懂 agent loop → 看 700 行
-- **嵌入**：在自己产品（游戏引擎、浏览器扩展、CI 工具）里加 agent 能力 → `npm install @puck-agent/core`
+- **嵌入**：在自己产品（游戏引擎、浏览器扩展、CI 工具）里加 agent 能力 → `npm install @puckguo123/core`
 - **审计**：想确保 agent 没在背后做什么 → 读源码，零依赖
 - **裁切**：项目只要 LLM + bash + read 三个能力 → `rm -rf packages/features` 删掉整个 features 目录
 - **跨工具会话合并**：从 pi / codex / claude 切到 puck 不用重做历史 → `/resume` 一键导入
@@ -131,16 +131,16 @@ puck 假设一种用户：**想搞清楚 agent loop 到底怎么工作的人**�
 
 | 包 | 作用 | 依赖 |
 |---|---|---|
-| [`@puck-agent/core`](packages/core) | agent loop、消息模型、事件流 | 零 |
-| [`@puck-agent/llm`](packages/llm) | OpenAI 兼容 / Anthropic / mock | 零 |
-| [`@puck-agent/session`](packages/session) | JSONL 持久化 + 跨 harness 导入 | 零 |
-| [`@puck-agent/tools`](packages/tools) | bash / read / write / edit | 零 |
-| [`@puck-agent/features`](packages/features) | compaction / subagent / skills / approval | 零 |
-| [`@puck-agent/timing`](packages/timing) | per-turn 延迟指标 | 零 |
-| [`@puck-agent/store`](packages/store) | 会话索引（sqlite） | core |
-| [`@puck-agent/memory`](packages/memory) | agent.md 上下文加载 / 经验蒸馏 | core + store |
-| [`@puck-agent/sdk`](packages/sdk) | createPuck() 高层门面 | 全部底层包 |
-| [`@puck-agent/web`](packages/web) | SSE Web 服务 | sdk + 底层 |
+| [`@puckguo123/core`](packages/core) | agent loop、消息模型、事件流 | 零 |
+| [`@puckguo123/llm`](packages/llm) | OpenAI 兼容 / Anthropic / mock | 零 |
+| [`@puckguo123/session`](packages/session) | JSONL 持久化 + 跨 harness 导入 | 零 |
+| [`@puckguo123/tools`](packages/tools) | bash / read / write / edit | 零 |
+| [`@puckguo123/features`](packages/features) | compaction / subagent / skills / approval | 零 |
+| [`@puckguo123/timing`](packages/timing) | per-turn 延迟指标 | 零 |
+| [`@puckguo123/store`](packages/store) | 会话索引（sqlite） | core |
+| [`@puckguo123/memory`](packages/memory) | agent.md 上下文加载 / 经验蒸馏 | core + store |
+| [`@puckguo123/sdk`](packages/sdk) | createPuck() 高层门面 | 全部底层包 |
+| [`@puckguo123/web`](packages/web) | SSE Web 服务 | sdk + 底层 |
 | [`puck-harness`](packages/cli) | CLI 入口（npm: `puck-harness`，bin: `puck`） | 全部 |
 
 ---
@@ -158,11 +158,11 @@ puck --mock "写一个 hello world"   # 离线 mock，不需要 API key
 ### 嵌入到你自己的项目
 
 ```bash
-npm install @puck-agent/core
+npm install @puckguo123/core
 ```
 
 ```ts
-import { Agent } from "@puck-agent/core";
+import { Agent } from "@puckguo123/core";
 
 const agent = new Agent({
   systemPrompt: "You are a careful code reviewer.",
@@ -202,7 +202,7 @@ puck /quit
 ### SDK 一次性装配
 
 ```ts
-import { createPuck } from "@puck-agent/sdk";
+import { createPuck } from "@puckguo123/sdk";
 
 const puck = createPuck({
   model: "deepseek-chat",        // 或 getModel/defineModel 自定义端点
@@ -227,8 +227,8 @@ for await (const event of puck.iterate("重构 src/utils.ts")) {
 ### 更底层（不用 SDK，只用核心）
 
 ```ts
-import { Agent } from "@puck-agent/core";
-import { createStreamFn, getModel } from "@puck-agent/llm";
+import { Agent } from "@puckguo123/core";
+import { createStreamFn, getModel } from "@puckguo123/llm";
 
 const agent = new Agent({
   systemPrompt: "...",
@@ -248,7 +248,7 @@ const agent = new Agent({
 任何 OpenAI 兼容端点用 `defineModel()`：
 
 ```ts
-import { defineModel, createStreamFn } from "@puck-agent/llm";
+import { defineModel, createStreamFn } from "@puckguo123/llm";
 
 const local = defineModel({
   id: "qwen3:32b", name: "Qwen3 32B",
@@ -282,7 +282,7 @@ npm run audit:publish   # 发布前自检：metadata + tarball + API key 扫描
 mock provider 让 e2e 测试零网络：
 
 ```ts
-import { createMockStreamFn } from "@puck-agent/llm/mock";
+import { createMockStreamFn } from "@puckguo123/llm/mock";
 const stream = createMockStreamFn([{ text: "hello" }, { text: " world" }]);
 ```
 
@@ -290,7 +290,7 @@ const stream = createMockStreamFn([{ text: "hello" }, { text: " world" }]);
 
 ## Web 端
 
-**[@puck-agent/web](packages/web)** — 零依赖 HTTP/SSE 服务器 + 零构建浏览器 UI，把完整 harness 暴露到网页端：`puck-web --mock`（[http://127.0.0.1:8787](http://127.0.0.1:8787)）。协议就是 core 的 `AgentEvent` 逐帧 SSE，UI 复刻 CLI term.ts 的视觉语言（thinking 灰显、工具折叠、状态栏、会话恢复回放）。
+**[@puckguo123/web](packages/web)** — 零依赖 HTTP/SSE 服务器 + 零构建浏览器 UI，把完整 harness 暴露到网页端：`puck-web --mock`（[http://127.0.0.1:8787](http://127.0.0.1:8787)）。协议就是 core 的 `AgentEvent` 逐帧 SSE，UI 复刻 CLI term.ts 的视觉语言（thinking 灰显、工具折叠、状态栏、会话恢复回放）。
 
 ---
 

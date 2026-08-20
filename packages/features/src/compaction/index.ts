@@ -19,8 +19,8 @@ import type {
 	TextContent,
 	ToolCall,
 	UserMessage,
-} from "@puck-agent/core";
-import { estimateMessageTokens, now } from "@puck-agent/core";
+} from "@puckguo123/core";
+import { estimateMessageTokens, now } from "@puckguo123/core";
 
 export interface CompactionOptions {
 	/** Summarizing stream function (usually the same as the agent's). */

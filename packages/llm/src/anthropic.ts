@@ -12,7 +12,7 @@ import type {
 	Tool,
 	ToolCall,
 	Usage,
-} from "@puck-agent/core";
+} from "@puckguo123/core";
 import type { CredentialStore } from "./auth.js";
 import { resolveApiKey } from "./auth.js";
 import type { Model } from "./models.js";

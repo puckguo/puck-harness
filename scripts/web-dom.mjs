@@ -2,7 +2,7 @@
  * Run app.js in a stubbed DOM against the real server + real SSE frames.
  * Reproduces the browser exactly — reveals rendering bugs without a browser.
  */
-import { createWebServer } from "@puck-agent/web";
+import { createWebServer } from "@puckguo123/web";
 import { mkdtempSync, rmSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";

@@ -1,4 +1,4 @@
-# @puck-agent/session
+# @puckguo123/session
 
 Append-only JSONL session transcripts with crash-safe append and a streaming reader. **Zero dependencies.**
 
@@ -7,13 +7,13 @@ Sessions are stored as one file per id (UUID or import-prefixed slug), each cont
 ## Install
 
 ```bash
-npm install @puck-agent/session
+npm install @puckguo123/session
 ```
 
 ## Quick start
 
 ```ts
-import { SessionStore } from "@puck-agent/session";
+import { SessionStore } from "@puckguo123/session";
 
 const store = new SessionStore(".puck/sessions");
 store.append(sessionId, { type: "header", id: sessionId, createdAt: Date.now() });
@@ -28,7 +28,7 @@ const sess = store.load(sessionId); // { id, messages, compactions, ... }
 Already have sessions from `pi`, `claude-code`, or `codex`? Use the `import` subpath to convert them into puck format:
 
 ```ts
-import { importExternalSession, scanExternalSessions } from "@puck-agent/session/import";
+import { importExternalSession, scanExternalSessions } from "@puckguo123/session/import";
 
 const pi = scanExternalSessions({ sources: ["pi"] });
 for (const info of pi) {

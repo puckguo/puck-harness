@@ -1,5 +1,5 @@
 {
-	"name": "@puck-agent/llm",
+	"name": "@puckguo123/llm",
 	"version": "0.1.0",
 	"description": "puck LLM adapters: OpenAI-compatible, Anthropic, and a scripted mock. Zero dependencies.",
 	"type": "module",
@@ -56,6 +56,6 @@
 		"node": ">=22.18.0"
 	},
 	"dependencies": {
-		"@puck-agent/core": "*"
+		"@puckguo123/core": "*"
 	}
 }

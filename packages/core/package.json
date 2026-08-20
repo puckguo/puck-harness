@@ -1,5 +1,5 @@
 {
-	"name": "@puck-agent/core",
+	"name": "@puckguo123/core",
 	"version": "0.1.0",
 	"description": "puck core: message model, tool interface, agent loop, events. Zero dependencies.",
 	"type": "module",

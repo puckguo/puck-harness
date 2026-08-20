@@ -2,7 +2,7 @@
  * Manual smoke check for the web package (not part of npm test).
  *   node scripts/web-smoke.mjs
  */
-import { createWebServer } from "@puck-agent/web";
+import { createWebServer } from "@puckguo123/web";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";

@@ -2,7 +2,7 @@
  * Model-picker UI flow check (stub DOM): catalog renders groups, keyless
  * providers offer inline login, keyed providers list their models.
  */
-import { createWebServer } from "@puck-agent/web";
+import { createWebServer } from "@puckguo123/web";
 import { readFileSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";

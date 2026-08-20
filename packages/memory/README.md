@@ -1,11 +1,11 @@
-# @puck-agent/memory
+# @puckguo123/memory
 
 `agent.md` context loading, idle tasks, daily summaries, and experience distillation.
 
 ## Install
 
 ```bash
-npm install @puck-agent/memory @puck-agent/core @puck-agent/store
+npm install @puckguo123/memory @puckguo123/core @puckguo123/store
 ```
 
 ## Features
@@ -18,8 +18,8 @@ npm install @puck-agent/memory @puck-agent/core @puck-agent/store
 ## Quick start
 
 ```ts
-import { MemoryStore } from "@puck-agent/memory";
-import { ConversationIndex } from "@puck-agent/store";
+import { MemoryStore } from "@puckguo123/memory";
+import { ConversationIndex } from "@puckguo123/store";
 
 const memory = new MemoryStore({
   index: new ConversationIndex(),

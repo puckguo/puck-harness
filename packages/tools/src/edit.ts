@@ -6,7 +6,7 @@
  * remaining offsets stay valid.
  */
 
-import type { Tool, ToolResult } from "@puck-agent/core";
+import type { Tool, ToolResult } from "@puckguo123/core";
 import { readFile, writeFile } from "node:fs/promises";
 import { resolveToolPath } from "./paths.js";
 

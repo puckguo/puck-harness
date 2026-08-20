@@ -1,6 +1,6 @@
 # puck-harness (CLI)
 
-The `puck` command — a minimal coding agent built on the `@puck-agent/*` SDK.
+The `puck` command — a minimal coding agent built on the `@puckguo123/*` SDK.
 
 > npm package name is `puck-harness` (the bare name `puck` was already taken); the installed binary is still `puck`.
 
@@ -37,7 +37,7 @@ The mock provider replays a deterministic script — no network, no key, determi
 
 ## What's inside
 
-- Thin wrapper around [`@puck-agent/sdk`](../sdk/README.md)
+- Thin wrapper around [`@puckguo123/sdk`](../sdk/README.md)
 - Slash-command parsing (`/login`, `/resume`, `/clear`, `/status`, `/help`, `/quit`)
 - TUI: spinner, streaming text, ANSI colors
 - Cross-harness session history (`/resume` reads from `~/.pi`, `~/.claude`, `~/.codex`)

@@ -5,7 +5,7 @@
  * `collector.attach(agent)` or feed events manually from your own subscriber.
  */
 
-import type { Agent, AgentEvent, AgentEventListener } from "@puck-agent/core";
+import type { Agent, AgentEvent, AgentEventListener } from "@puckguo123/core";
 import type { TurnTiming } from "./types.js";
 
 export interface TimingCollectorOptions {

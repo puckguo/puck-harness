@@ -1,8 +1,8 @@
 /**
- * @puck-agent/tools — built-in tools, each deletable via its subpath export.
+ * @puckguo123/tools — built-in tools, each deletable via its subpath export.
  */
 
-import type { Tool } from "@puck-agent/core";
+import type { Tool } from "@puckguo123/core";
 import { createBashTool } from "./bash.js";
 import { createEditTool } from "./edit.js";
 import { createReadTool } from "./read.js";

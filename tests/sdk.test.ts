@@ -4,10 +4,10 @@
 
 import assert from "node:assert/strict";
 import test from "node:test";
-import type { Tool } from "@puck-agent/core";
-import { createPuck } from "@puck-agent/sdk";
-import { createMockStreamFn } from "@puck-agent/llm";
-import { SessionStore } from "@puck-agent/session";
+import type { Tool } from "@puckguo123/core";
+import { createPuck } from "@puckguo123/sdk";
+import { createMockStreamFn } from "@puckguo123/llm";
+import { SessionStore } from "@puckguo123/session";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";

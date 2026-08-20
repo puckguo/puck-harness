@@ -1,5 +1,5 @@
 {
-	"name": "@puck-agent/tools",
+	"name": "@puckguo123/tools",
 	"version": "0.1.0",
 	"description": "puck built-in tools: bash, read, write, edit. Zero dependencies.",
 	"type": "module",
@@ -64,6 +64,6 @@
 		"node": ">=22.18.0"
 	},
 	"dependencies": {
-		"@puck-agent/core": "*"
+		"@puckguo123/core": "*"
 	}
 }

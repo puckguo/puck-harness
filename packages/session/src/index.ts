@@ -12,7 +12,7 @@
  * mid-write) are skipped on load.
  */
 
-import type { Message } from "@puck-agent/core";
+import type { Message } from "@puckguo123/core";
 import { randomUUID } from "node:crypto";
 import { appendFileSync, existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";

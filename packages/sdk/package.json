@@ -1,5 +1,5 @@
 {
-	"name": "@puck-agent/sdk",
+	"name": "@puckguo123/sdk",
 	"version": "0.1.0",
 	"description": "puck SDK: createPuck() — one call to assemble an agent from the pieces you want.",
 	"type": "module",
@@ -43,10 +43,10 @@
 		"node": ">=22.18.0"
 	},
 	"dependencies": {
-		"@puck-agent/core": "*",
-		"@puck-agent/features": "*",
-		"@puck-agent/llm": "*",
-		"@puck-agent/session": "*",
-		"@puck-agent/tools": "*"
+		"@puckguo123/core": "*",
+		"@puckguo123/features": "*",
+		"@puckguo123/llm": "*",
+		"@puckguo123/session": "*",
+		"@puckguo123/tools": "*"
 	}
 }

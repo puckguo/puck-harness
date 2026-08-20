@@ -16,7 +16,7 @@ Email: **<security@puck-harness.example>** (replace with real address when known
 Include:
 - A clear description of the vulnerability and its impact
 - A minimal reproduction (code snippet, CLI command, or test case)
-- The version(s) of `@puck-agent/*` / `puck` affected
+- The version(s) of `@puckguo123/*` / `puck` affected
 - Your assessment of severity (e.g. RCE / data leak / DoS / info disclosure)
 
 ## Response SLAs
@@ -32,12 +32,12 @@ We will acknowledge receipt within the SLA window and keep you updated on progre
 
 ## Scope
 
-`@puck-agent/*` packages and the `puck` CLI. The `puck-demo` examples in this repo are out of scope (they're documentation, not shipped code).
+`@puckguo123/*` packages and the `puck` CLI. The `puck-demo` examples in this repo are out of scope (they're documentation, not shipped code).
 
 ## Out of scope
 
 - Vulnerabilities in third-party model providers (Anthropic, OpenAI, etc.) — please report those to the vendor
-- Issues in your own integrations built on top of `@puck-agent/*` SDK
+- Issues in your own integrations built on top of `@puckguo123/*` SDK
 - "Bug-as-feature" reports about the harness being too minimal or too unopinionated (file an issue instead)
 
 ## Authentication & credentials

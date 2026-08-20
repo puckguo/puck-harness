@@ -1,5 +1,5 @@
 /**
- * @puck-agent/web — the puck web client.
+ * @puckguo123/web — the puck web client.
  *
  *   server:   createWebServer({ port, mock })        → HTTP + SSE
  *   cli:      puck-web [--port 8787] [--mock]

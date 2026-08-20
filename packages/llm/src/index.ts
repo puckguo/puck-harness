@@ -1,5 +1,5 @@
 /**
- * @puck-agent/llm — provider adapters behind puck's single StreamFn seam.
+ * @puckguo123/llm — provider adapters behind puck's single StreamFn seam.
  */
 
 export type { Model } from "./models.js";
@@ -30,7 +30,7 @@ export {
 
 import type { CredentialStore } from "./auth.js";
 import type { Model } from "./models.js";
-import type { StreamFn } from "@puck-agent/core";
+import type { StreamFn } from "@puckguo123/core";
 import { streamAnthropic } from "./anthropic.js";
 import { streamOpenAi } from "./openai.js";
 

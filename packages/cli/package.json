@@ -38,14 +38,14 @@
 		"node": ">=22.18.0"
 	},
 	"dependencies": {
-		"@puck-agent/core": "*",
-		"@puck-agent/features": "*",
-		"@puck-agent/llm": "*",
-		"@puck-agent/sdk": "*",
-		"@puck-agent/session": "*",
-		"@puck-agent/tools": "*",
-		"@puck-agent/timing": "*",
-		"@puck-agent/store": "*",
-		"@puck-agent/memory": "*"
+		"@puckguo123/core": "*",
+		"@puckguo123/features": "*",
+		"@puckguo123/llm": "*",
+		"@puckguo123/sdk": "*",
+		"@puckguo123/session": "*",
+		"@puckguo123/tools": "*",
+		"@puckguo123/timing": "*",
+		"@puckguo123/store": "*",
+		"@puckguo123/memory": "*"
 	}
 }

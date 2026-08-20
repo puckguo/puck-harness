@@ -8,8 +8,8 @@ import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import type { Message } from "@puck-agent/core";
-import { createMockStreamFn, streamOpenAi, streamAnthropic, contextWindowFor, recordContextWindow, resolveModel, defineModel } from "@puck-agent/llm";
+import type { Message } from "@puckguo123/core";
+import { createMockStreamFn, streamOpenAi, streamAnthropic, contextWindowFor, recordContextWindow, resolveModel, defineModel } from "@puckguo123/llm";
 
 const testModel = defineModel({
 	id: "test-model",
@@ -223,7 +223,7 @@ test("anthropic: tool results merge into one user turn", async () => {
 });
 
 test("splitThinkTags: handles split/unclosed/absent tags", async () => {
-	const { splitThinkTags } = await import("@puck-agent/llm");
+	const { splitThinkTags } = await import("@puckguo123/llm");
 	assert.deepEqual(splitThinkTags("<think>推理</think>\n\n答案"), { thinking: "推理", text: "\n\n答案" });
 	assert.deepEqual(splitThinkTags("<think>还没结"), { thinking: "还没结", text: "" });
 	assert.deepEqual(splitThinkTags("普通"), { thinking: "", text: "普通" });

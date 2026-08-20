@@ -7,8 +7,8 @@ import test from "node:test";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createBashTool, createEditTool, createReadTool, createWriteTool, runShellCommand } from "@puck-agent/tools";
-import { truncateHead, truncateTail } from "@puck-agent/tools";
+import { createBashTool, createEditTool, createReadTool, createWriteTool, runShellCommand } from "@puckguo123/tools";
+import { truncateHead, truncateTail } from "@puckguo123/tools";
 
 function makeTmpDir(): string {
 	return mkdtempSync(join(tmpdir(), "puck-test-"));

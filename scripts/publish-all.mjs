@@ -16,7 +16,7 @@
 //  ⚠️  24h 内可 unpublish；超过 24h 只能 deprecate。
 //
 //  版本号替换说明（关键）：
-//    source package.json 里 @puck-agent/* 依赖写的是 "*"（workspace
+//    source package.json 里 @puckguo123/* 依赖写的是 "*"（workspace
 //    本地解析用——npm install 时会 symlink 到本地 packages/）。
 //    但 publish 出去的 tarball 必须是真实 semver 范围，否则用户安装
 //    时会拉到任意版本（未来 1.0 不兼容会直接炸）。
@@ -83,7 +83,7 @@ for (const name of ORDER) {
 	pkgMeta.push({ dir: name, path: pkgPath, name: pkg.name, version: pkg.version });
 }
 
-// ── 3. 把 @puck-agent/* 的 "*" 改写为 "^<version>" ─────────────
+// ── 3. 把 @puckguo123/* 的 "*" 改写为 "^<version>" ─────────────
 // source 里保持 "*"（workspace 用），publish 临时改，发完恢复。
 console.log("→ 改写 inter-package 依赖: * → ^<version>（publish 后恢复）\n");
 const savedOriginals = [];
@@ -96,8 +96,8 @@ for (const m of pkgMeta) {
 		const deps = pkg[depField];
 		if (!deps) continue;
 		for (const dep of Object.keys(deps)) {
-			// 匹配 @puck-agent/* 且值为 "*" 或 "workspace:*"
-			if (dep.startsWith("@puck-agent/") && (deps[dep] === "*" || deps[dep] === "workspace:*")) {
+			// 匹配 @puckguo123/* 且值为 "*" 或 "workspace:*"
+			if (dep.startsWith("@puckguo123/") && (deps[dep] === "*" || deps[dep] === "workspace:*")) {
 				// 找到这个依赖的版本（从 pkgMeta 里）
 				const target = pkgMeta.find((p) => p.name === dep);
 				if (!target) {
@@ -153,7 +153,7 @@ console.log(`\n${okCount}/${results.length} 成功${DRY ? "（dry-run）" : ""}�
 if (DRY) {
 	console.log("\n下一步：去掉 --dry-run 重跑以真实发布。");
 } else if (!failed) {
-	console.log("\n✓ 全部完成！验证：npm view puck version / npm view @puck-agent/core version");
+	console.log("\n✓ 全部完成！验证：npm view puck version / npm view @puckguo123/core version");
 } else {
 	process.exit(1);
 }

@@ -13,7 +13,7 @@
  *                          on demand (cheaper context, one extra hop)
  */
 
-import type { Tool, ToolResult } from "@puck-agent/core";
+import type { Tool, ToolResult } from "@puckguo123/core";
 import { readdirSync } from "node:fs";
 import { readFile, stat } from "node:fs/promises";
 import { join } from "node:path";

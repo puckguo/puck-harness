@@ -1,5 +1,5 @@
 {
-	"name": "@puck-agent/memory",
+	"name": "@puckguo123/memory",
 	"version": "0.1.0",
 	"description": "puck memory — agent.md context loading, idle tasks, daily summaries, experience distillation",
 	"type": "module",
@@ -46,8 +46,8 @@
 		"build": "tsc -b"
 	},
 	"dependencies": {
-		"@puck-agent/core": "*",
-		"@puck-agent/store": "*"
+		"@puckguo123/core": "*",
+		"@puckguo123/store": "*"
 	},
 	"devDependencies": {
 		"typescript": "^5.9.3"

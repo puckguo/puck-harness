@@ -8,8 +8,8 @@ import test from "node:test";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { detectFormat, importExternalSession, scanExternalSessions, cwdMatches, claudeCwdSlug, piCwdSlug, type ExternalSessionInfo } from "@puck-agent/session/import";
-import { SessionStore } from "@puck-agent/session";
+import { detectFormat, importExternalSession, scanExternalSessions, cwdMatches, claudeCwdSlug, piCwdSlug, type ExternalSessionInfo } from "@puckguo123/session/import";
+import { SessionStore } from "@puckguo123/session";
 
 function tmp(): string {
 	return mkdtempSync(join(tmpdir(), "puck-import-"));

@@ -31,7 +31,7 @@ core ← features(compaction|subagent|skills|approval 各自独立) ↗
 ## 自定义 StreamFn（替换整个 llm 层）
 
 ```ts
-import type { AssistantStream, LlmContext, StreamFn } from "@puck-agent/core";
+import type { AssistantStream, LlmContext, StreamFn } from "@puckguo123/core";
 
 const myStream: StreamFn = (context: LlmContext): AssistantStream => {
 	// 调用任意 SDK/HTTP 端点，把结果映射为 AssistantMessage。

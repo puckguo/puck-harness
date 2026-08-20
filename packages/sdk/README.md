@@ -1,17 +1,17 @@
-# @puck-agent/sdk
+# @puckguo123/sdk
 
 The high-level entry point. One call — `createPuck({ ... })` — wires up the agent loop, an LLM stream function, tools, and optional session persistence.
 
 ## Install
 
 ```bash
-npm install @puck-agent/sdk
+npm install @puckguo123/sdk
 ```
 
 ## Quick start
 
 ```ts
-import { createPuck } from "@puck-agent/sdk";
+import { createPuck } from "@puckguo123/sdk";
 
 const puck = createPuck({
   model: "deepseek-chat",        // or any model id from `puck /login`
@@ -37,10 +37,10 @@ for await (const ev of puck.iterate("重构 src/utils.ts")) {
 
 If you only need a piece (e.g. the agent loop without sessions), use the individual packages:
 
-- `@puck-agent/core` — agent loop + message model
-- `@puck-agent/llm` — OpenAI / Anthropic / mock adapters
-- `@puck-agent/session` — JSONL persistence
-- `@puck-agent/tools` — bash / read / write / edit
+- `@puckguo123/core` — agent loop + message model
+- `@puckguo123/llm` — OpenAI / Anthropic / mock adapters
+- `@puckguo123/session` — JSONL persistence
+- `@puckguo123/tools` — bash / read / write / edit
 
 ## CLI
 

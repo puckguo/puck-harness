@@ -7,8 +7,8 @@
  * plausibility, compares models, and interprets the flagged anomalies.
  */
 
-import type { AssistantMessage, StreamFn, TextContent } from "@puck-agent/core";
-import { userMessage } from "@puck-agent/core";
+import type { AssistantMessage, StreamFn, TextContent } from "@puckguo123/core";
+import { userMessage } from "@puckguo123/core";
 import { aggregateByModel, detectAnomalies, formatMs } from "./aggregate.js";
 import type { TurnTiming } from "./types.js";
 

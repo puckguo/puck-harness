@@ -14,9 +14,9 @@
  * racing on one session simply serialize inside the agent loop.
  */
 
-import type { AgentEvent } from "@puck-agent/core";
-import { estimateMessageTokens } from "@puck-agent/core";
-import { compactNow } from "@puck-agent/features/compaction";
+import type { AgentEvent } from "@puckguo123/core";
+import { estimateMessageTokens } from "@puckguo123/core";
+import { compactNow } from "@puckguo123/features/compaction";
 import {
 	createMockStreamFn,
 	FileCredentialStore,
@@ -24,10 +24,10 @@ import {
 	listModels,
 	listProviders,
 	resolveModel,
-} from "@puck-agent/llm";
-import { createPuck, getDefaultModel, setDefaultModel, type Puck } from "@puck-agent/sdk";
-import { SessionStore } from "@puck-agent/session";
-import { aggregateByModel, TimingCollector, TimingStore } from "@puck-agent/timing";
+} from "@puckguo123/llm";
+import { createPuck, getDefaultModel, setDefaultModel, type Puck } from "@puckguo123/sdk";
+import { SessionStore } from "@puckguo123/session";
+import { aggregateByModel, TimingCollector, TimingStore } from "@puckguo123/timing";
 import { randomUUID } from "node:crypto";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { join } from "node:path";
@@ -200,7 +200,7 @@ export function createWebServer(options: WebServerOptions = {}) {
 		}
 
 		if (url.pathname === "/api/models" && req.method === "GET") {
-			const { discoverUsableModels } = await import("@puck-agent/llm");
+			const { discoverUsableModels } = await import("@puckguo123/llm");
 			const usable = options.mock ? [] : await discoverUsableModels(credentials);
 			return json(res, 200, usable.map((entry) => ({ provider: entry.provider.id, models: entry.models })));
 		}

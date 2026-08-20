@@ -12,8 +12,8 @@
  */
 import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import type { StreamFn } from "@puck-agent/core";
-import type { ConversationStore } from "@puck-agent/store";
+import type { StreamFn } from "@puckguo123/core";
+import type { ConversationStore } from "@puckguo123/store";
 import { clipExperience, clipLongTerm, EXPERIENCE_CAP_LINES } from "./context.js";
 import { localDateStr } from "./tasks.js";
 

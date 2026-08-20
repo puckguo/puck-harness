@@ -1,21 +1,21 @@
 /**
- * @puck-agent/sdk — `createPuck()`: assemble an agent from exactly the
+ * @puckguo123/sdk — `createPuck()`: assemble an agent from exactly the
  * pieces you want. This is the convenience facade; every parameter is
  * optional and every underlying package can be used directly instead.
  */
 
-import type { AgentEvent, AgentEventListener, LoopHooks, Message, StreamFn, Tool, Usage } from "@puck-agent/core";
-import { Agent, assistantText, sumUsage } from "@puck-agent/core";
-import type { ApprovalGateOptions } from "@puck-agent/features/approval";
-import { createApprovalGate } from "@puck-agent/features/approval";
-import type { CompactionOptions } from "@puck-agent/features/compaction";
-import { createCompactionHook } from "@puck-agent/features/compaction";
-import type { Model } from "@puck-agent/llm";
-import { createMockStreamFn, createStreamFn, FileCredentialStore, loginProvider, logoutProvider, resolveModel, type CredentialStore, type LoginInteraction } from "@puck-agent/llm";
-import { Session, SessionStore } from "@puck-agent/session";
-import { createCodingTools } from "@puck-agent/tools";
+import type { AgentEvent, AgentEventListener, LoopHooks, Message, StreamFn, Tool, Usage } from "@puckguo123/core";
+import { Agent, assistantText, sumUsage } from "@puckguo123/core";
+import type { ApprovalGateOptions } from "@puckguo123/features/approval";
+import { createApprovalGate } from "@puckguo123/features/approval";
+import type { CompactionOptions } from "@puckguo123/features/compaction";
+import { createCompactionHook } from "@puckguo123/features/compaction";
+import type { Model } from "@puckguo123/llm";
+import { createMockStreamFn, createStreamFn, FileCredentialStore, loginProvider, logoutProvider, resolveModel, type CredentialStore, type LoginInteraction } from "@puckguo123/llm";
+import { Session, SessionStore } from "@puckguo123/session";
+import { createCodingTools } from "@puckguo123/tools";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { puckDir } from "@puck-agent/llm";
+import { puckDir } from "@puckguo123/llm";
 
 export interface PuckOptions {
 	/** Model id from the catalog, a custom Model, or "mock" for offline runs. */
@@ -75,8 +75,8 @@ export interface Puck {
 	abort(): void;
 }
 
-// re-export auth helpers so SDK consumers don't need @puck-agent/llm for login flows
-export { loginProvider, logoutProvider, type LoginInteraction } from "@puck-agent/llm";
+// re-export auth helpers so SDK consumers don't need @puckguo123/llm for login flows
+export { loginProvider, logoutProvider, type LoginInteraction } from "@puckguo123/llm";
 
 /** Persist the default model id for future puck sessions (~/.puck/config.json). */
 export function setDefaultModel(modelId: string): void {

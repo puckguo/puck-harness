@@ -1,4 +1,4 @@
-# @puck-agent/core
+# @puckguo123/core
 
 The agent loop, message model, tool interface, and event stream. **Zero dependencies.**
 
@@ -7,18 +7,18 @@ This is the lowest level of the puck stack — if you want to embed an agent loo
 ## Install
 
 ```bash
-npm install @puck-agent/core
+npm install @puckguo123/core
 ```
 
 ## Quick start
 
 ```ts
-import { Agent } from "@puck-agent/core";
-import type { Tool, AgentEvent } from "@puck-agent/core";
+import { Agent } from "@puckguo123/core";
+import type { Tool, AgentEvent } from "@puckguo123/core";
 
 const agent = new Agent({
   systemPrompt: "You are a careful code reviewer.",
-  // your StreamFn from @puck-agent/llm
+  // your StreamFn from @puckguo123/llm
   stream: async (messages, signal) => {
     // yield AgentEvents (message_start / message_update / message_end / turn_end)
   },
@@ -43,9 +43,9 @@ for await (const ev of agent.iterate("review src/foo.ts")) {
 
 ## What's NOT in this package
 
-- LLM HTTP calls (see `@puck-agent/llm`)
-- Tool implementations like `bash` / `read` / `write` (see `@puck-agent/tools`)
-- Session persistence (see `@puck-agent/session`)
+- LLM HTTP calls (see `@puckguo123/llm`)
+- Tool implementations like `bash` / `read` / `write` (see `@puckguo123/tools`)
+- Session persistence (see `@puckguo123/session`)
 
 ## License
 

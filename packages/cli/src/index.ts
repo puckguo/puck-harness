@@ -15,23 +15,23 @@
  *   /status                     # current model / session / keys
  */
 
-import type { AgentEvent, Message } from "@puck-agent/core";
-import { estimateMessageTokens } from "@puck-agent/core";
-import { compactNow } from "@puck-agent/features/compaction";
-import { createMockStreamFn, createStreamFn, discoverUsableModels, FileCredentialStore, findProvider, listModels, listProviders, loginProvider, logoutProvider, PROVIDERS, resolveApiKey, resolveModel, resolveProviderApiKey } from "@puck-agent/llm";
-import { createPuck, DEFAULT_CODING_PROMPT, getDefaultModel, setDefaultModel } from "@puck-agent/sdk";
-import { SessionStore } from "@puck-agent/session";
-import { ConversationStore } from "@puck-agent/store";
-import { IdleTaskScheduler, loadAgentContext, memoryStats, runDailySummary, runLongTermDistill, type ContextSource } from "@puck-agent/memory";
-import { importExternalSession, scanExternalSessions, type ExternalSessionInfo, type ImportSource, cwdMatches } from "@puck-agent/session/import";
-import { aggregateByModel, analyzeTimings, detectAnomalies, formatMs, generateDashboard, TimingCollector, TimingStore } from "@puck-agent/timing";
+import type { AgentEvent, Message } from "@puckguo123/core";
+import { estimateMessageTokens } from "@puckguo123/core";
+import { compactNow } from "@puckguo123/features/compaction";
+import { createMockStreamFn, createStreamFn, discoverUsableModels, FileCredentialStore, findProvider, listModels, listProviders, loginProvider, logoutProvider, PROVIDERS, resolveApiKey, resolveModel, resolveProviderApiKey } from "@puckguo123/llm";
+import { createPuck, DEFAULT_CODING_PROMPT, getDefaultModel, setDefaultModel } from "@puckguo123/sdk";
+import { SessionStore } from "@puckguo123/session";
+import { ConversationStore } from "@puckguo123/store";
+import { IdleTaskScheduler, loadAgentContext, memoryStats, runDailySummary, runLongTermDistill, type ContextSource } from "@puckguo123/memory";
+import { importExternalSession, scanExternalSessions, type ExternalSessionInfo, type ImportSource, cwdMatches } from "@puckguo123/session/import";
+import { aggregateByModel, analyzeTimings, detectAnomalies, formatMs, generateDashboard, TimingCollector, TimingStore } from "@puckguo123/timing";
 import { createInterface } from "node:readline";
 import { homedir } from "node:os";
 import { buildBar, renderBar, renderEditDiff, renderToolEnd, SlashPopup, Spinner, TerminalChrome, FileTrail, renderTrail, selectFromList, queryCursorPosition, WorkingTitle, formatTokens, summarizeTurn, QueuedInput, clipCp, renderQueueRows, parseInterject, type SlashCommand, type TurnSummary, type QueueViewState } from "./term.js";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import { randomUUID } from "node:crypto";
-import { puckDir } from "@puck-agent/llm";
+import { puckDir } from "@puckguo123/llm";
 
 /** Slash commands — single source for /help and the live popup. */
 const SLASH_COMMANDS: SlashCommand[] = [
@@ -1621,7 +1621,7 @@ async function main(): Promise<void> {
 	// Run only when the REPL is interactive and idle; never blocks input.
 	let scheduler: IdleTaskScheduler | undefined;
 	if (memoryEnabled && conversationStore) {
-		let memoryStreamFn: import("@puck-agent/core").StreamFn | undefined;
+		let memoryStreamFn: import("@puckguo123/core").StreamFn | undefined;
 		if (args.mock) memoryStreamFn = createMockStreamFn(MOCK_SCRIPT);
 		else if (memoryConfig.model || modelId) {
 			try {
@@ -1940,7 +1940,7 @@ async function runTimingsCommand(argv: string[]): Promise<void> {
 	}
 
 	if (analyze) {
-		const { createStreamFn, resolveModel: resolve } = await import("@puck-agent/llm");
+		const { createStreamFn, resolveModel: resolve } = await import("@puckguo123/llm");
 		// pick the default model if usable, else any usable provider/model
 		const credentials = new FileCredentialStore();
 		let modelId = getDefaultModel() ?? "";

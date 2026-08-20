@@ -5,7 +5,7 @@
  * it (prompt the user, check a rule set, call a webhook — up to the host).
  */
 
-import type { BeforeToolCallResult, LoopHooks, ToolCall } from "@puck-agent/core";
+import type { BeforeToolCallResult, LoopHooks, ToolCall } from "@puckguo123/core";
 
 export type ApprovalDecision = boolean | "always-allow";
 

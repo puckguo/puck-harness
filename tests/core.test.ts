@@ -4,9 +4,9 @@
 
 import assert from "node:assert/strict";
 import test from "node:test";
-import { Agent, runAgentLoop, validateToolArguments } from "@puck-agent/core";
-import type { AgentEvent, Message, Tool } from "@puck-agent/core";
-import { createMockStreamFn } from "@puck-agent/llm";
+import { Agent, runAgentLoop, validateToolArguments } from "@puckguo123/core";
+import type { AgentEvent, Message, Tool } from "@puckguo123/core";
+import { createMockStreamFn } from "@puckguo123/llm";
 
 function echoTool(overrides: Partial<Tool> = {}): Tool {
 	return {

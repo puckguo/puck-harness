@@ -2,7 +2,7 @@
  * write tool — create or overwrite a file (parent directories are created).
  */
 
-import type { Tool, ToolResult } from "@puck-agent/core";
+import type { Tool, ToolResult } from "@puckguo123/core";
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { resolveToolPath } from "./paths.js";

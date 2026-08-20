@@ -6,8 +6,8 @@
  * always sees a well-formed stream.
  */
 
-import type { AssistantMessage, AssistantStream, StreamEvent, Usage } from "@puck-agent/core";
-import { EMPTY_USAGE } from "@puck-agent/core";
+import type { AssistantMessage, AssistantStream, StreamEvent, Usage } from "@puckguo123/core";
+import { EMPTY_USAGE } from "@puckguo123/core";
 
 export function errorMessage(model: string, message: string, aborted: boolean): AssistantMessage {
 	return {

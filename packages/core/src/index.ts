@@ -1,5 +1,5 @@
 /**
- * @puck-agent/core — the minimal agent harness core.
+ * @puckguo123/core — the minimal agent harness core.
  *
  * Zero dependencies. Everything else in puck is optional and built on
  * top of exactly these exports.

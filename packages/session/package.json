@@ -1,5 +1,5 @@
 {
-	"name": "@puck-agent/session",
+	"name": "@puckguo123/session",
 	"version": "0.1.0",
 	"description": "puck session persistence: append-only JSONL transcripts. Zero dependencies.",
 	"type": "module",
@@ -47,6 +47,6 @@
 		"node": ">=22.18.0"
 	},
 	"dependencies": {
-		"@puck-agent/core": "*"
+		"@puckguo123/core": "*"
 	}
 }

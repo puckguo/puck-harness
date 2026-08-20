@@ -3,7 +3,7 @@
  * as base64 for multimodal models.
  */
 
-import type { Tool, ToolResult } from "@puck-agent/core";
+import type { Tool, ToolResult } from "@puckguo123/core";
 import { readFile, stat } from "node:fs/promises";
 import { extname } from "node:path";
 import { resolveToolPath } from "./paths.js";

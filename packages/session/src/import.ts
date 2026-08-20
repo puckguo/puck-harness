@@ -21,7 +21,7 @@
  * session file is materialized (id prefix `import-<source>-`).
  */
 
-import type { AssistantMessage, Message, TextContent, ThinkingContent, ToolCall, ToolResultMessage, Usage, UserMessage } from "@puck-agent/core";
+import type { AssistantMessage, Message, TextContent, ThinkingContent, ToolCall, ToolResultMessage, Usage, UserMessage } from "@puckguo123/core";
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { Session } from "./index.js";

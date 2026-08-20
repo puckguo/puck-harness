@@ -1,4 +1,4 @@
-# @puck-agent/web
+# @puckguo123/web
 
 puck 的 web client —— 一个零依赖的 HTTP/SSE 服务器 + 零构建的浏览器 UI，把 puck harness 完整暴露给网页端。
 
@@ -19,11 +19,11 @@ node packages/web/dist/cli.js --cwd /path/to/project --model deepseek-chat
    │  GET  /api/state /api/sessions /api/models /api/health
    │  POST /api/model /api/login /api/logout /api/abort
    ▼
-createWebServer()  ──  @puck-agent/sdk createPuck()（每 sessionId 一个实例）
+createWebServer()  ──  @puckguo123/sdk createPuck()（每 sessionId 一个实例）
                           │
-                          ├─ @puck-agent/tools   bash/read/write/edit（cwd 可指定）
-                          ├─ @puck-agent/session JSONL 会话持久化（/resume 可恢复）
-                          ├─ @puck-agent/llm     FileCredentialStore + 多 provider
+                          ├─ @puckguo123/tools   bash/read/write/edit（cwd 可指定）
+                          ├─ @puckguo123/session JSONL 会话持久化（/resume 可恢复）
+                          ├─ @puckguo123/llm     FileCredentialStore + 多 provider
                           └─ compaction          100k 自动压缩
 ```
 
@@ -41,7 +41,7 @@ createWebServer()  ──  @puck-agent/sdk createPuck()（每 sessionId 一个�
 ## SDK 用法
 
 ```ts
-import { createWebServer } from "@puck-agent/web";
+import { createWebServer } from "@puckguo123/web";
 
 const server = createWebServer({
   port: 8787,

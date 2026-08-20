@@ -5,9 +5,9 @@
 
 import assert from "node:assert/strict";
 import test from "node:test";
-import type { AgentEvent, Message, Tool } from "@puck-agent/core";
-import { Agent } from "@puck-agent/core";
-import { createMockStreamFn } from "@puck-agent/llm";
+import type { AgentEvent, Message, Tool } from "@puckguo123/core";
+import { Agent } from "@puckguo123/core";
+import { createMockStreamFn } from "@puckguo123/llm";
 import {
 	aggregateByModel,
 	aggregateBySession,
@@ -18,7 +18,7 @@ import {
 	TimingCollector,
 	TimingStore,
 	type TurnTiming,
-} from "@puck-agent/timing";
+} from "@puckguo123/timing";
 import { appendFileSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -60,7 +60,7 @@ function userMsg(): Message {
 	return { role: "user", content: "hi", timestamp: 0 };
 }
 
-function assistantMsg(partial: { model?: string; usage?: Partial<import("@puck-agent/core").Usage>; stopReason?: import("@puck-agent/core").StopReason } = {}): Message {
+function assistantMsg(partial: { model?: string; usage?: Partial<import("@puckguo123/core").Usage>; stopReason?: import("@puckguo123/core").StopReason } = {}): Message {
 	return {
 		role: "assistant",
 		content: [{ type: "text", text: "ok" }],

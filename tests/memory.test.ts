@@ -8,9 +8,9 @@ import test from "node:test";
 import { existsSync, mkdtempSync, mkdirSync, rmSync, writeFileSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { AssistantMessage, AssistantStream, StreamFn } from "@puck-agent/core";
-import { ConversationStore } from "@puck-agent/store";
-import { loadAgentContext, clipExperience, clipLongTerm, TaskCatalog, IdleTaskScheduler, runDailySummary, runLongTermDistill, redact, memoryStats, localDateStr, longTermPath } from "@puck-agent/memory";
+import type { AssistantMessage, AssistantStream, StreamFn } from "@puckguo123/core";
+import { ConversationStore } from "@puckguo123/store";
+import { loadAgentContext, clipExperience, clipLongTerm, TaskCatalog, IdleTaskScheduler, runDailySummary, runLongTermDistill, redact, memoryStats, localDateStr, longTermPath } from "@puckguo123/memory";
 
 function tmp(): string {
 	return mkdtempSync(join(tmpdir(), "puck-memory-"));

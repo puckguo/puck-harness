@@ -110,7 +110,7 @@ REPL 里可用命令：直接输入对话；`exit` / `quit` 退出；斜杠命�
 
 ## Web 使用
 
-`@puck-agent/web` 把同一个 harness 暴露成网页端（零依赖 HTTP/SSE + 零构建 vanilla JS UI）：
+`@puckguo123/web` 把同一个 harness 暴露成网页端（零依赖 HTTP/SSE + 零构建 vanilla JS UI）：
 
 ```bash
 npm run web                        # http://127.0.0.1:8787（读 ~/.puck/auth.json）
@@ -126,7 +126,7 @@ node packages/web/dist/cli.js --no-ui   # 只做 API server（自备前端）
 ### 最小示例（对话 + 内置工具）
 
 ```ts
-import { createPuck } from "@puck-agent/sdk";
+import { createPuck } from "@puckguo123/sdk";
 
 const puck = createPuck({
   model: "MiniMax-M3",                    // 目录里的模型 id
@@ -181,7 +181,7 @@ puck.abort();   // 当前 run 优雅停止，落一条 stopReason: "aborted" 的
 ### 自定义工具
 
 ```ts
-import type { Tool } from "@puck-agent/core";
+import type { Tool } from "@puckguo123/core";
 
 const searchTool: Tool = {
   name: "search_docs",
@@ -204,7 +204,7 @@ const puck = createPuck({ model: "MiniMax-M3", tools: [searchTool] });
 工具混合内置的：
 
 ```ts
-import { createCodingTools } from "@puck-agent/tools";
+import { createCodingTools } from "@puckguo123/tools";
 
 createPuck({
   model: "deepseek-chat",
@@ -266,7 +266,7 @@ await resumed.run("继续刚才的对话");
 ### 子代理（并行子任务）
 
 ```ts
-import { createSubagentTool } from "@puck-agent/features/subagent";
+import { createSubagentTool } from "@puckguo123/features/subagent";
 
 const agentTool = createSubagentTool({
   streamFn: createStreamFn(getModel("MiniMax-M3")),
@@ -281,7 +281,7 @@ createPuck({ model: "MiniMax-M3", tools: [agentTool] });
 ### 技能（可复用指令包）
 
 ```ts
-import { createSkillTool, loadSkills, skillsToPrompt } from "@puck-agent/features/skills";
+import { createSkillTool, loadSkills, skillsToPrompt } from "@puckguo123/features/skills";
 
 const skills = await loadSkills("./skills");   // 每个子目录一个 SKILL.md
 // 方式 A：全部注入 system prompt（模型直接知道怎么做）
@@ -293,7 +293,7 @@ createPuck({ model: "MiniMax-M3", tools: [createSkillTool(skills)] });
 ### 自定义模型端点（ollama / vllm / openrouter / 任何 OpenAI 兼容）
 
 ```ts
-import { defineModel } from "@puck-agent/llm";
+import { defineModel } from "@puckguo123/llm";
 
 const local = defineModel({
   id: "qwen3:32b",
@@ -310,8 +310,8 @@ createPuck({ model: local, apiKey: "ollama" });
 ### 不用 SDK，直接用 core（最底层）
 
 ```ts
-import { Agent } from "@puck-agent/core";
-import { createStreamFn, getModel } from "@puck-agent/llm";
+import { Agent } from "@puckguo123/core";
+import { createStreamFn, getModel } from "@puckguo123/llm";
 
 const agent = new Agent({
   systemPrompt: "...",
@@ -332,7 +332,7 @@ agent.setModel("deepseek-chat", createStreamFn(getModel("deepseek-chat")));
 ### 密钥录入（SDK 宿主自定义 UI）
 
 ```ts
-import { createPuck, loginProvider } from "@puck-agent/sdk";
+import { createPuck, loginProvider } from "@puckguo123/sdk";
 
 const puck = createPuck({ model: "MiniMax-M3", tools: "coding" });
 
@@ -349,7 +349,7 @@ await loginProvider("minimax", puck.credentials!, {
 ### 离线调试（mock 剧本）
 
 ```ts
-import { createMockStreamFn } from "@puck-agent/llm";
+import { createMockStreamFn } from "@puckguo123/llm";
 
 const puck = createPuck({
   model: "mock",
@@ -381,7 +381,7 @@ REPL 里每轮显示 `— 1234 tokens · 首字 0.9s · 本轮 2.1s —`；`/tim
 SDK 直接使用：
 
 ```ts
-import { TimingCollector, TimingStore, generateDashboard, analyzeTimings } from "@puck-agent/timing";
+import { TimingCollector, TimingStore, generateDashboard, analyzeTimings } from "@puckguo123/timing";
 
 const store = new TimingStore();
 const collector = new TimingCollector({
