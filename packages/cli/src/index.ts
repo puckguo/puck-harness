@@ -18,7 +18,7 @@
 import type { AgentEvent, Message } from "@puckguo123/core";
 import { estimateMessageTokens } from "@puckguo123/core";
 import { compactNow } from "@puckguo123/features/compaction";
-import { createSkillTool, loadAllHarnessSkills, skillsToPrompt, type Skill } from "@puckguo123/features/skills";
+import { createIndexedSkillTool, loadHarnessSkillsIndexed, skillsIndexToPrompt, type SkillIndex } from "@puckguo123/features/skills";
 import { createMockStreamFn, createStreamFn, discoverUsableModels, FileCredentialStore, findProvider, listModels, listProviders, loginProvider, logoutProvider, PROVIDERS, resolveApiKey, resolveModel, resolveProviderApiKey } from "@puckguo123/llm";
 import { createPuck, DEFAULT_CODING_PROMPT, getDefaultModel, setDefaultModel } from "@puckguo123/sdk";
 import { createCodingTools } from "@puckguo123/tools";
@@ -820,7 +820,7 @@ async function handleSlashCommand(
 		onModelChange?: (id: string) => void;
 		onResume?: (id: string, model: string | undefined, stats: { turns: number; compactions: number; title: string }) => Promise<void> | void;
 		memory?: { home: string; store: ConversationStore | null; sources: ContextSource[]; scheduler: IdleTaskScheduler | undefined };
-		skills?: Skill[];
+		skillIndex?: SkillIndex;
 		args?: { noSkills: boolean };
 	},
 ): Promise<boolean> {
@@ -954,26 +954,50 @@ async function handleSlashCommand(
 			// Re-scan on every invocation so newly installed skills (in any
 			// harness's skills dir) show up without a restart — same philosophy
 			// as /memory reload.
-			let live: Skill[];
+			let live: SkillIndex;
+			let origins = new Map<string, string[]>();
+			let dups = 0;
 			try {
-				live = await loadAllHarnessSkills(homedir());
+				const indexed = await loadHarnessSkillsIndexed(homedir());
+				live = indexed.index;
+				origins = indexed.origins;
+				dups = indexed.duplicates;
 			} catch {
-				live = context.skills ?? [];
+				live = context.skillIndex ?? { packs: [], loose: [] };
 			}
 			if (context.args?.noSkills) {
 				console.log("技能未加载（--no-skills）");
 				return true;
 			}
-			if (live.length === 0) {
-				console.log("未发现任何技能。放一个目录到 ~/.puck/skills/<name>/SKILL.md 即可（也读 ~/.claude · ~/.codex · ~/.pi）");
+			const total = live.packs.length + live.loose.length;
+			if (total === 0) {
+				console.log("未发现任何技能。放一个目录到 ~/.puck/skills/<name>/SKILL.md 即可；或建 ~/.puck/skills/<pack>/PACK.md 做成技能包（也读 ~/.claude · ~/.codex · ~/.pi）");
 				return true;
 			}
-			console.log(`技能（${live.length} 个，模型用 skill 工具按需加载）：`);
-			for (const s of live) {
-				// path = <home>/<.claude>/skills/<name>/SKILL.md → origin is 3rd from the end
-				const segs = dirname(s.path).split(/[\\/]/);
-				const origin = segs[segs.length - 3]; // e.g. ".claude"
-				console.log(`  ${s.name}${origin ? COLORS.dim + "（" + origin + "）" + COLORS.reset : ""}${s.description ? " — " + s.description.slice(0, 100) : ""}`);
+			const childTotal = live.packs.reduce((n, p) => n + p.children.length, 0);
+			console.log(`技能（${total} 个${live.packs.length ? `，其中 ${live.packs.length} 个技能包含计 ${childTotal} 个子技能（加载包后按 包名/子技能名 下钻）` : ""}，模型用 skill 工具按需加载）：`);
+			for (const p of live.packs) {
+				const from = origins.get(p.name) ?? [];
+				// "source:name" entries are loose skills absorbed by this pack's
+				// children — summarized instead of listed inline (25 of them would
+				// drown the line)
+				const harnesses = from.filter((f) => !f.includes(":"));
+				const absorbed = from.filter((f) => f.includes(":"));
+				const parts = [];
+				if (harnesses.length > 0) parts.push(harnesses.join("+"));
+				if (absorbed.length > 0) parts.push(`吸收 ${absorbed.length} 个同名平铺副本`);
+				const tag = parts.join(" · ");
+				console.log(`  ${p.name} [包·${p.children.length} 子技能]${tag ? COLORS.dim + "（" + tag + "）" + COLORS.reset : ""}${p.description ? " — " + p.description.slice(0, 100) : ""}`);
+			}
+			for (const s of live.loose) {
+				// origins map carries every harness that offers this skill; skills
+				// installed in >1 harness show all of them (dedup kept the first)
+				const from = origins.get(s.name) ?? [];
+			const tag = from.length > 1 ? from.join("+") + "，已去重" : (from[0] ?? "");
+			console.log(`  ${s.name}${tag ? COLORS.dim + "（" + tag + "）" + COLORS.reset : ""}${s.description ? " — " + s.description.slice(0, 100) : ""}`);
+			}
+			if (dups > 0) {
+				console.log(COLORS.dim + `（${dups} 个重复技能已按 .puck > .claude > .codex > .pi 优先级去重）` + COLORS.reset);
 			}
 			return true;
 		}
@@ -1451,22 +1475,30 @@ async function main(): Promise<void> {
 	// --- skills layer -------------------------------------------------------
 	// Every harness on this machine gets a chance: ~/.puck/skills first, then
 	// ~/.claude, ~/.codex, ~/.pi — so a skill installed for Claude Code or Codex
-	// works in puck with zero copying. Skills are exposed as an on-demand `skill`
-	// tool (descriptions live in the system prompt, full instructions load on
-	// call) — cheap context, same discovery model as pi/claude.
+	// works in puck with zero copying. Two tiers: a PACK.md directory is a
+	// *skill pack* (one prompt line, children addressed as "pack/child"),
+	// everything else stays a loose skill. Descriptions live in the system
+	// prompt; full instructions load through the `skill` tool on demand.
 	// Failures degrade to "no skills"; they never block the REPL.
-	let skills: Skill[] = [];
+	let skillIndex: SkillIndex = { packs: [], loose: [] };
+	let skillDupCount = 0;
 	if (!args.noSkills) {
 		try {
-			skills = await loadAllHarnessSkills(homedir());
+			const indexed = await loadHarnessSkillsIndexed(homedir());
+			skillIndex = indexed.index;
+			skillDupCount = indexed.duplicates;
 		} catch {
-			skills = [];
+			skillIndex = { packs: [], loose: [] };
 		}
 	}
-	const skillTool = createSkillTool(skills);
-	const skillPrompt = skillsToPrompt(skills);
-	if (skills.length > 0) {
-		console.log(COLORS.dim + `技能: ${skills.length} 个（来自 ~/.puck · ~/.claude · ~/.codex · ~/.pi 的 skills 目录，/skills 查看）` + COLORS.reset);
+	const skillTool = createIndexedSkillTool(skillIndex);
+	const skillPrompt = skillsIndexToPrompt(skillIndex);
+	const skillCount = skillIndex.packs.length + skillIndex.loose.length;
+	const packedChildren = skillIndex.packs.reduce((n, p) => n + p.children.length, 0);
+	if (skillCount > 0) {
+		const dupNote = skillDupCount > 0 ? `，含 ${skillDupCount} 个跨 harness 重名去重` : "";
+		const packNote = skillIndex.packs.length > 0 ? `（含 ${skillIndex.packs.length} 个技能包，内即 ${packedChildren} 个子技能，加载包后按 包名/子技能名 寻址）` : "";
+		console.log(COLORS.dim + `技能: ${skillCount} 个${packNote}${dupNote}（来自 ~/.puck · ~/.claude · ~/.codex · ~/.pi 的 skills 目录，/skills 查看）` + COLORS.reset);
 	}
 	const fullAgentContext = agentContext + skillPrompt;
 
@@ -1863,7 +1895,7 @@ async function main(): Promise<void> {
 				credentials,
 				mock: args.mock,
 				memory: { home, store: conversationStore, sources: memorySources, scheduler },
-				skills,
+				skillIndex,
 				args,
 				thinking: {
 					get: () => thinkingEffort,

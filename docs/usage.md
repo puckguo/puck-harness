@@ -298,6 +298,30 @@ const all = await loadAllHarnessSkills();
 
 **CLI 默认开启**：启动时自动加载上述四个目录的全部技能，描述进 system prompt、正文经 `skill` 工具按需加载；`/skills` 查看清单（含来源标注，每次重扫免重启），`--no-skills` 关闭。
 
+### 技能包（双层：一个名字，一个入口）
+
+一族技能（如飞书 25 个 `lark-*`）平铺时 description 会吃掉一半 system prompt 预算。技能包把它们收进一个目录：包占 prompt 一行，子技能在模型加载包之后按 `包名/子技能名` 下钻。
+
+```text
+~/.claude/skills/
+  lark/PACK.md            ← 包清单：name/description + 路由表
+  lark/lark-base/SKILL.md ← 子技能：普通技能，往里嵌一层
+  review/SKILL.md         ← 平铺技能照旧，互不影响
+```
+
+判定规则：目录下有 `PACK.md` → 是包；有 `SKILL.md` → 是技能。claude/codex 会忽略 PACK.md 目录（无 SKILL.md 即跳过），子技能目录原封不动，互认不破坏。
+
+```ts
+import { createIndexedSkillTool, loadHarnessSkillsIndexed, skillsIndexToPrompt } from "@puckguo123/features/skills";
+
+const { index } = await loadHarnessSkillsIndexed();  // 四个 harness 目录的 包 + 平铺技能
+createPuck({ model: "MiniMax-M3", systemPrompt: base + skillsIndexToPrompt(index), tools: [createIndexedSkillTool(index)] });
+// 模型调 skill({name:"lark"}) → 路由表 + 子技能清单
+// 再调 skill({name:"lark/lark-base"}) → 子技能全文
+```
+
+实测（本机 60 个技能，25 个 lark）：prompt 11.2K → 5.6K 字符（省 50%），行数 60 → 21，`skill` 工具 enum 60 → 35 项。子技能不进 enum——模型必须先加载包看路由表，“先读 lark-shared 再操作”这类前置约束由机制保证。
+
 ### 自定义模型端点（ollama / vllm / openrouter / 任何 OpenAI 兼容）
 
 ```ts
