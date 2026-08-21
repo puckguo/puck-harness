@@ -30,6 +30,7 @@ import { aggregateByModel, analyzeTimings, detectAnomalies, formatMs, generateDa
 import { createInterface } from "node:readline";
 import { homedir } from "node:os";
 import { buildBar, renderBar, renderEditDiff, renderToolEnd, SlashPopup, Spinner, TerminalChrome, FileTrail, renderTrail, selectFromList, queryCursorPosition, WorkingTitle, formatTokens, summarizeTurn, QueuedInput, clipCp, renderQueueRows, parseInterject, type SlashCommand, type TurnSummary, type QueueViewState } from "./term.js";
+import { errorLogPath, logError } from "./errorlog.js";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { randomUUID } from "node:crypto";
@@ -185,7 +186,7 @@ const SOURCE_COLORS: Record<"puck" | ImportSource, string> = ttyOut
 		}
 	: { puck: "", pi: "", claude: "", codex: "" };
 
-function renderEvents(hooks?: { onFileTouched?: (path: string) => void; onTurnSummary?: (summary: TurnSummary) => void }): ((event: AgentEvent) => void) & { beginRun: (prefix?: string) => void; setIdleTitle: (title?: string) => void } {
+function renderEvents(hooks?: { onFileTouched?: (path: string) => void; onTurnSummary?: (summary: TurnSummary) => void; onError?: (info: { kind: string; error: unknown; context?: Record<string, unknown> }) => void }): ((event: AgentEvent) => void) & { beginRun: (prefix?: string) => void; setIdleTitle: (title?: string) => void } {
 	// Per-class streaming state: append-only deltas for thinking (gray) and
 	// text (body) parts — thinking must stream visibly, it IS the wait explanation.
 	let renderedThink = "";
@@ -202,6 +203,9 @@ function renderEvents(hooks?: { onFileTouched?: (path: string) => void; onTurnSu
 	// First streamed assistant text of the WHOLE run (Enter → first token),
 	// NOT reset per turn — tool turns in between must not re-measure it.
 	let firstTokenAt: number | undefined;
+	// Args of in-flight tool calls (call id → args), kept only until tool_end —
+	// gives onError the exact model arguments behind a failed call.
+	const toolArgs = new Map<string, unknown>();
 	const renderContent = (content: Array<{ type: string; thinking?: string; text?: string }>): void => {
 		const think = content
 			.filter((c) => c.type === "thinking")
@@ -293,6 +297,7 @@ function renderEvents(hooks?: { onFileTouched?: (path: string) => void; onTurnSu
 				break;
 			case "tool_start":
 				spinner.stop();
+				toolArgs.set(event.toolCallId, event.args);
 				if (event.toolName === "write" || event.toolName === "edit") {
 					const touched = (event.args as { path?: string } | undefined)?.path;
 					if (touched) hooks?.onFileTouched?.(touched);
@@ -300,6 +305,15 @@ function renderEvents(hooks?: { onFileTouched?: (path: string) => void; onTurnSu
 				process.stdout.write(renderToolStart(event.toolName, event.args));
 				break;
 			case "tool_end": {
+				const failedArgs = toolArgs.get(event.toolCallId);
+				toolArgs.delete(event.toolCallId);
+				if (event.isError) {
+					const text = (event.result.content ?? [])
+						.filter((c) => c.type === "text")
+						.map((c) => c.text ?? "")
+						.join("\n");
+					hooks?.onError?.({ kind: "tool", error: text || "tool failed", context: { tool: event.toolName, args: failedArgs } });
+				}
 				const mark = event.isError ? `${COLORS.err}❌ ${event.toolName}${COLORS.reset}\n` : `${COLORS.ok}✅ ${event.toolName}${COLORS.reset}\n`;
 				process.stdout.write(mark + renderToolEnd(event.result));
 				// tools done → the next LLM turn is another silent period
@@ -1260,6 +1274,27 @@ async function runFirstLoginWizard(rl: ReturnType<typeof createInterface>, crede
 }
 
 async function main(): Promise<void> {
+	// --- crash safety net — installed before anything can throw ----------------
+	// Every observable failure lands in .puck/error.log (see errorlog.ts):
+	// stray exceptions, pre-REPL rejections, API/tool errors (via onError).
+	let replStarted = false; // also guards the processLine TDZ until the REPL opens (set near the end)
+	process.on("uncaughtException", (error) => {
+		logError("uncaught", error);
+		try {
+			process.stdout.write("\r\x1b[K\x1b[?25h\n"); // clear spinner residue, show cursor
+		} catch {
+			/* stdout already gone */
+		}
+		process.stderr.write(`puck 崩溃：${error instanceof Error ? error.message : String(error)}\n（详情已记录到 ${errorLogPath()}）\n`);
+		process.exit(1);
+	});
+	process.on("unhandledRejection", (reason) => {
+		logError("unhandledRejection", reason);
+		if (replStarted) return; // interactive session survives a stray rejection
+		// pre-REPL failure: exiting beats hanging on an open TTY stdin
+		process.stderr.write(`puck: ${reason instanceof Error ? reason.message : String(reason)}\n（详情已记录到 ${errorLogPath()}）\n`);
+		process.exit(1);
+	});
 	// CPR BEFORE the readline exists (it owns stdin afterwards). Tells the
 	// chrome whether the shell left the cursor below the future scroll region.
 	const startCursorRow = await queryCursorPosition().then((r) => r?.row);
@@ -1312,7 +1347,6 @@ async function main(): Promise<void> {
 	// that races the wizard is parked, never lost. onReplLine only ever runs
 	// after processLine is defined (wizardActive stays true until REPL start).
 	const replLines: string[] = [];
-	let replStarted = false; // guards the processLine TDZ until the REPL opens
 	let wizardRan = false; // first-run wizard ran → REPL repositions its cursor
 	const beforeLine: { run?: () => void } = {}; // popup wipe hooks in later
 	attachLineRouter(rl, {
@@ -1444,6 +1478,8 @@ async function main(): Promise<void> {
 			barState.summary = summary.oneLine;
 			repaintSummary();
 		},
+		// every observable error → .puck/error.log (see errorlog.ts)
+		onError: (info) => logError(info.kind, info.error, { model: args.mock ? "mock" : (modelId || "mock"), ...info.context }),
 	});
 	const timingStore = new TimingStore();
 	// coding tools + the `skill` loader tool (skill tool is added even with zero
@@ -1905,7 +1941,10 @@ async function main(): Promise<void> {
 		queuedInput.attach(rl);
 		activeRun = runtime.puck
 			.run(input)
-			.catch((error: unknown) => console.error(`error: ${error instanceof Error ? error.message : String(error)}`))
+			.catch((error: unknown) => {
+				logError("run", error);
+				console.error(`error: ${error instanceof Error ? error.message : String(error)}`);
+			})
 			.then(() => {
 				activeRun = undefined;
 				queuedInput.detach(rl);
