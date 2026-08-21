@@ -60,8 +60,8 @@ export function createEditTool(options: EditToolOptions = {}): Tool {
 			} catch (error) {
 				return { content: [{ type: "text", text: error instanceof Error ? error.message : String(error) }], isError: true };
 			}
-			const edits = ((args as { edits?: EditOperation[] }).edits) ?? [];
-			if (edits.length === 0) {
+			const edits = (args as { edits?: EditOperation[] }).edits;
+			if (!Array.isArray(edits) || edits.length === 0) {
 				return { content: [{ type: "text", text: "No edits provided" }], isError: true };
 			}
 
@@ -72,7 +72,16 @@ export function createEditTool(options: EditToolOptions = {}): Tool {
 
 			// Validate every edit against the original content first.
 			const ranges: AppliedRange[] = [];
-			for (const edit of edits) {
+			for (const raw of edits) {
+				// Model args can arrive malformed — oldText/newText must be strings.
+				const edit = (raw ?? {}) as { oldText?: unknown; newText?: unknown };
+				if (typeof edit.oldText !== "string" || typeof edit.newText !== "string") {
+					const typeOf = (v: unknown): string => (v === null ? "null" : Array.isArray(v) ? "array" : typeof v);
+					return {
+						content: [{ type: "text", text: `edits[].oldText and newText must be strings (got ${typeOf(edit.oldText)}/${typeOf(edit.newText)})` }],
+						isError: true,
+					};
+				}
 				if (!edit.oldText) {
 					return { content: [{ type: "text", text: "oldText must not be empty" }], isError: true };
 				}

@@ -4,7 +4,7 @@
 
 import assert from "node:assert/strict";
 import test from "node:test";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createBashTool, createEditTool, createReadTool, createWriteTool, runShellCommand } from "@puckguo123/tools";
@@ -122,6 +122,41 @@ test("edit: applies unique replacements and rejects ambiguous ones", async () =>
 		);
 		assert.equal(ambiguous.isError, true);
 		assert.match((ambiguous.content[0] as { text: string }).text, /not unique/);
+	} finally {
+		rmSync(dir, { recursive: true, force: true });
+	}
+});
+
+test("edit: malformed edits (non-string oldText/newText) return an error, not a crash", async () => {
+	const dir = makeTmpDir();
+	const file = join(dir, "code.ts");
+	writeFileSync(file, "const a = 1;\n");
+	try {
+		const edit = createEditTool({ cwd: dir });
+
+		// object/array/number values — the crash case from issue reports
+		const bad = (await edit.execute(
+			{ path: "code.ts", edits: [{ oldText: { deep: true } as never, newText: ["x"] as never }] },
+			ctx,
+		)) as { isError?: boolean; content: Array<{ type: string; text: string }> };
+		assert.equal(bad.isError, true);
+		assert.match(bad.content[0].text, /must be strings \(got object\/array\)/);
+
+		// null/undefined fields
+		const nullish = (await edit.execute(
+			{ path: "code.ts", edits: [{ oldText: null as never, newText: "x" }] },
+			ctx,
+		)) as { isError?: boolean; content: Array<{ type: string; text: string }> };
+		assert.equal(nullish.isError, true);
+		assert.match(nullish.content[0].text, /must be strings \(got null\/string\)/);
+
+		// edits not an array at all
+		const noArray = await edit.execute({ path: "code.ts", edits: "nope" as never }, ctx);
+		assert.equal(noArray.isError, true);
+		assert.match((noArray.content[0] as { text: string }).text, /No edits provided/);
+
+		// file untouched by failed runs
+		assert.equal(readFileSync(file, "utf8"), "const a = 1;\n");
 	} finally {
 		rmSync(dir, { recursive: true, force: true });
 	}

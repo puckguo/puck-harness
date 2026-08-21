@@ -21,6 +21,20 @@ test("renderEditDiff: red minus / green plus, capped at 3 lines", () => {
 	assert.equal(renderEditDiff([]), "");
 });
 
+test("renderEditDiff: malformed edits (non-string fields) never throw", () => {
+	// These mirror model-emitted args that previously crashed the CLI:
+	// TypeError: (s ?? "").split is not a function
+	const obj = strip(renderEditDiff([{ oldText: { deep: true }, newText: ["a", "b"] }]));
+	assert.ok(obj.includes('- {"deep":true}'), obj);
+	assert.ok(obj.includes('+ ["a","b"]'), obj);
+
+	assert.equal(renderEditDiff([{ oldText: 42, newText: 7 }]), renderEditDiff([{ oldText: "42", newText: "7" }]));
+	assert.equal(renderEditDiff([{}]), "");
+	assert.equal(renderEditDiff([{ oldText: null, newText: undefined }]), "");
+	assert.equal(renderEditDiff(["not an object"]), "");
+	assert.equal(renderEditDiff([{ oldText: 10n, newText: Symbol("x") }]), "");
+});
+
 test("renderToolEnd: folds to 3 lines with +M more", () => {
 	const mk = (lines: string[]): { content: Array<{ type: string; text: string }> } => ({
 		content: [{ type: "text", text: lines.join("\n") }],
