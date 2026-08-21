@@ -665,8 +665,20 @@ const RESET = "\x1b[0m";
 /** Red/green preview of an edit's first change — pure coloring, no diff algorithm. */
 export function renderEditDiff(edits: unknown): string {
 	if (!Array.isArray(edits) || edits.length === 0) return "";
-	const first = (edits[0] ?? {}) as { oldText?: string; newText?: string };
-	const lines = (s: string | undefined): string[] => (s ?? "").split("\n").slice(0, 3);
+	const first = (edits[0] ?? {}) as { oldText?: unknown; newText?: unknown };
+	// Model args may arrive malformed (oldText/newText as object/array/number);
+	// the renderer must never crash on them.
+	const lines = (s: unknown): string[] => {
+		if (s == null) return [];
+		if (typeof s === "string") return s.split("\n").slice(0, 3);
+		try {
+			const json = JSON.stringify(s);
+			return json === undefined ? [] : [json];
+		} catch {
+			// BigInt / circular structures → skip
+			return [];
+		}
+	};
 	let out = "";
 	for (const l of lines(first.oldText)) out += "\n" + RED + "  - " + clipLine(l, 100) + RESET;
 	for (const l of lines(first.newText)) out += "\n" + GREEN + "  + " + clipLine(l, 100) + RESET;
@@ -861,6 +873,8 @@ export class QueuedInput {
 			/** Submitted line (Enter). May be empty/whitespace — host decides (and filters). */
 			onQueue: (line: string) => void;
 			onSigint: () => void;
+			/** ESC key — host semantics (stop the streaming run when active). */
+			onEscape?: () => void;
 			/** Typed-text echo: the host renders the live buffer in its pinned queue rows. */
 			onEcho: (str: string, buf: string) => void;
 		},
@@ -883,14 +897,21 @@ export class QueuedInput {
 		input.removeListener("keypress", this.onKey);
 		for (const l of this.suspended) input.on("keypress", l);
 		this.suspended = [];
-		// the in-flight buffer dies here — the host already echoed the queued
-		// line; an unfinished buffer is dropped (matches what the user saw)
+		// the in-flight buffer dies here — the host already echoed the
+		// queued line; an unfinished buffer is dropped (matches what the user saw)
 		this.buf = "";
 	}
 
 	private onKey = (str: string, key?: { name?: string; ctrl?: boolean; meta?: boolean; sequence?: string }): void => {
 		if (key?.ctrl && key.name === "c") {
 			this.handlers.onSigint();
+			return;
+		}
+		// ESC during a run: stop the AI gracefully (the run settles with an
+		// aborted assistant message; the transcript stays resumable). Handled by
+		// the host — this class only forwards the keystroke.
+		if (key?.name === "escape") {
+			this.handlers.onEscape?.();
 			return;
 		}
 		if (key?.name === "enter" || key?.name === "return") {
@@ -914,7 +935,6 @@ export class QueuedInput {
 		}
 	};
 }
-
 export function selectFromList(rl: Interface, title: string, items: SelectItem[], opts: SelectOptions = {}): Promise<number> {
 	const cancel = opts.cancelResult ?? -1;
 	if (items.length === 0) return Promise.resolve(cancel);

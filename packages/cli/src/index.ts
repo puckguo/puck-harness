@@ -287,7 +287,13 @@ function renderEvents(hooks?: { onFileTouched?: (path: string) => void; onTurnSu
 				}
 				if (event.message.role === "assistant") {
 					if (event.message.stopReason === "error") {
+						hooks?.onError?.({ kind: "api", error: event.message.errorMessage ?? "unknown API error" });
 						process.stdout.write(`${COLORS.err}✗ ${event.message.errorMessage ?? "error"}${COLORS.reset}\n`);
+					}
+					// aborted: partial thinking/text already streamed — mark the cutoff so
+					// the transcript boundary is visible (matches the "⏹ 已停止" line)
+					if (event.message.stopReason === "aborted") {
+							process.stdout.write(`${COLORS.dim}⏹ 已中止（部分输出可能不完整）${COLORS.reset}\n`);
 					}
 					spinner.stop(runPrefix);
 				if ((renderedThink || renderedText) && !(renderedText || "").endsWith("\n")) process.stdout.write("\n");
@@ -1070,6 +1076,7 @@ async function handleSlashCommand(
 			}
 		case "help":
 			for (const c of SLASH_COMMANDS) console.log("/" + c.name + (c.args ? " " + c.args : "").padEnd(20) + c.desc);
+			console.log(COLORS.dim + "运行中：Esc 停止当前回答 · 直接打字排队下一轮 · ！开头立即插队 · Ctrl+C 两次退出" + COLORS.reset);
 			return true;
 		default:
 			console.log(`Unknown command /${name}. Try /help`);
@@ -1692,6 +1699,17 @@ async function main(): Promise<void> {
 			repaintQueue();
 		},
 		onSigint: () => sigintDuringRun(),
+		// ESC while the run is streaming → graceful abort: the in-flight LLM call
+		// returns an aborted assistant message, queued tool calls are closed out
+		// with abort errors, and the transcript stays valid for /resume. Typed
+		// queue rows are preserved (they were submitted, not aborted).
+		onEscape: () => {
+			if (!activeRun) return; // idle ESC (e.g. closing the slash popup) — nothing to stop
+			if (runtime.puck.agent.isStreaming) {
+				runtime.puck.agent.abort();
+				process.stdout.write("\n" + COLORS.dim + "⏹ 已停止（Esc）— 输入继续，或 /resume 回看" + COLORS.reset + "\n");
+			}
+		},
 		onEcho: (_str, buf) => {
 			queueView.typing = buf;
 			repaintQueue();
