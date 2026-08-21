@@ -1,6 +1,6 @@
 {
 	"name": "@puckguo123/web",
-	"version": "0.1.0",
+	"version": "0.2.0",
 	"description": "puck web client — SSE server exposing the puck harness to a browser UI.",
 	"type": "module",
 	"main": "./dist/index.js",

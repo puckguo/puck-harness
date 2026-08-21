@@ -1,6 +1,6 @@
 {
 	"name": "puck-harness",
-	"version": "0.1.0",
+	"version": "0.2.0",
 	"description": "puck CLI — a minimal coding agent built on the puck harness.",
 	"type": "module",
 	"main": "./dist/index.js",
