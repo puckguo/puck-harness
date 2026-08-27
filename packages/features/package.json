@@ -1,6 +1,6 @@
 {
 	"name": "@puckguo123/features",
-	"version": "0.2.0",
+	"version": "0.2.1",
 	"description": "puck optional features: compaction, subagent, skills, approval, rewind. Each subpath is independent and deletable.",
 	"type": "module",
 	"exports": {

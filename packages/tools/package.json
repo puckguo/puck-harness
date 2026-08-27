@@ -1,6 +1,6 @@
 {
 	"name": "@puckguo123/tools",
-	"version": "0.2.0",
+	"version": "0.2.1",
 	"description": "puck built-in tools: bash, read, write, edit. Zero dependencies.",
 	"type": "module",
 	"main": "./dist/index.js",

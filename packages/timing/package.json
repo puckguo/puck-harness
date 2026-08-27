@@ -1,6 +1,6 @@
 {
 	"name": "@puckguo123/timing",
-	"version": "0.2.0",
+	"version": "0.2.1",
 	"description": "puck timing: per-turn model latency metrics, JSONL store, HTML dashboard, LLM-based sanity analysis. Zero dependencies.",
 	"type": "module",
 	"main": "./dist/index.js",

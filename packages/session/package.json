@@ -1,6 +1,6 @@
 {
 	"name": "@puckguo123/session",
-	"version": "0.2.0",
+	"version": "0.2.1",
 	"description": "puck session persistence: append-only JSONL transcripts. Zero dependencies.",
 	"type": "module",
 	"main": "./dist/index.js",

@@ -1,6 +1,6 @@
 {
 	"name": "@puckguo123/sdk",
-	"version": "0.2.0",
+	"version": "0.2.1",
 	"description": "puck SDK: createPuck() — one call to assemble an agent from the pieces you want.",
 	"type": "module",
 	"main": "./dist/index.js",
