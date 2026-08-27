@@ -15,9 +15,10 @@
  *   /status                     # current model / session / keys
  */
 
-import type { AgentEvent, Message } from "@puckguo123/core";
+import type { AgentEvent, LoopHooks, Message } from "@puckguo123/core";
 import { estimateMessageTokens } from "@puckguo123/core";
 import { compactNow } from "@puckguo123/features/compaction";
+import { RewindStore, applyFileOps, type Checkpoint } from "@puckguo123/features/rewind";
 import { createIndexedSkillTool, loadHarnessSkillsIndexed, skillsIndexToPrompt, type SkillIndex } from "@puckguo123/features/skills";
 import { createMockStreamFn, createStreamFn, discoverUsableModels, FileCredentialStore, findProvider, listModels, listProviders, loginProvider, logoutProvider, PROVIDERS, resolveApiKey, resolveModel, resolveProviderApiKey } from "@puckguo123/llm";
 import { createPuck, DEFAULT_CODING_PROMPT, getDefaultModel, setDefaultModel } from "@puckguo123/sdk";
@@ -29,10 +30,11 @@ import { importExternalSession, scanExternalSessions, type ExternalSessionInfo, 
 import { aggregateByModel, analyzeTimings, detectAnomalies, formatMs, generateDashboard, TimingCollector, TimingStore } from "@puckguo123/timing";
 import { createInterface } from "node:readline";
 import { homedir } from "node:os";
-import { buildBar, renderBar, renderEditDiff, renderToolEnd, SlashPopup, Spinner, TerminalChrome, FileTrail, renderTrail, selectFromList, queryCursorPosition, WorkingTitle, formatTokens, summarizeTurn, QueuedInput, clipCp, renderQueueRows, parseInterject, type SlashCommand, type TurnSummary, type QueueViewState } from "./term.js";
+import { buildBar, renderBar, renderEditDiff, renderToolEnd, SlashPopup, Spinner, TerminalChrome, FileTrail, renderTrail, selectFromList, queryCursorPosition, WorkingTitle, formatTokens, summarizeTurn, QueuedInput, clipCp, renderQueueRows, parseInterject, DoubleEscDetector, watchStandaloneEsc, type SlashCommand, type TurnSummary, type QueueViewState } from "./term.js";
 import { errorLogPath, logError } from "./errorlog.js";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { basename, dirname, join } from "node:path";
+import { expandFileMentions, FileIndex, MentionPopup, type ReadFileResult } from "./filemention.js";
+import { mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { basename, dirname, join, resolve, sep } from "node:path";
 import { randomUUID } from "node:crypto";
 import { puckDir } from "@puckguo123/llm";
 
@@ -45,6 +47,7 @@ const SLASH_COMMANDS: SlashCommand[] = [
 	{ name: "think", args: "[off|low|medium|high]", desc: "调整 thinking 等级（下一轮生效）" },
 	{ name: "compact", desc: "手动压缩上下文（摘要折叠旧对话，保留最近轮）" },
 	{ name: "clear", desc: "清空上下文，开始新对话（原会话保留在磁盘，可 /resume 找回）" },
+	{ name: "rewind", desc: "回退到之前的节点（双击 Esc 同样触发）：对话 / 代码 / 两者" },
 	{ name: "resume", desc: "选择一个历史会话继续对话（puck + pi/codex/claude 合并，默认当前项目（含外部会话），a 切全部目录）" },
 	{ name: "memory", desc: "记忆系统：agent.md / experience / 每日总结" },
 	{ name: "skills", desc: "已加载的技能清单（来自 ~/.puck · ~/.claude · ~/.codex · ~/.pi 的 skills 目录）" },
@@ -822,6 +825,8 @@ async function handleSlashCommand(
 		memory?: { home: string; store: ConversationStore | null; sources: ContextSource[]; scheduler: IdleTaskScheduler | undefined };
 		skillIndex?: SkillIndex;
 		args?: { noSkills: boolean };
+		/** Open the rewind picker (double-ESC / /rewind share one entry). */
+		onRewind?: () => Promise<void> | void;
 	},
 ): Promise<boolean> {
 	const [name, ...rest] = command.slice(1).split(/\s+/);
@@ -930,6 +935,11 @@ async function handleSlashCommand(
 				return true;
 			}
 			context.onClear?.();
+			return true;
+		}
+		case "rewind": {
+			// same picker as double-ESC — explicit entry for pipe mode & discoverability
+			await context.onRewind?.();
 			return true;
 		}
 		case "memory": {
@@ -1100,6 +1110,8 @@ async function handleSlashCommand(
 			}
 		case "help":
 			for (const c of SLASH_COMMANDS) console.log("/" + c.name + (c.args ? " " + c.args : "").padEnd(20) + c.desc);
+			console.log(COLORS.dim + "输入 @ 触发文件选择器：继续输入按文件名过滤（模糊匹配），↑↓ 选择，Tab/Enter 插入路径，提交时自动附加文件内容" + COLORS.reset);
+			console.log(COLORS.dim + "双击 Esc（或 /rewind）：回退到之前任一节点——对话、会话与代码可分别或一起恢复" + COLORS.reset);
 			console.log(COLORS.dim + "运行中：Esc 停止当前回答 · 直接打字排队下一轮 · ！开头立即插队 · Ctrl+C 两次退出" + COLORS.reset);
 			return true;
 		default:
@@ -1303,6 +1315,18 @@ async function runFirstLoginWizard(rl: ReturnType<typeof createInterface>, crede
 	if (!provider) return "";
 	return chooseDefaultModel(rl, provider, credentials);
 }
+
+/** Read a file for @-mention attachment: existing text files under cwd, ≤256KB. */
+const readMentionFile = (rel: string): ReadFileResult | undefined => {
+	try {
+		const full = resolve(process.cwd(), rel);
+		const st = statSync(full);
+		if (!st.isFile() || st.size > 262_144) return undefined;
+		return { content: readFileSync(full, "utf8"), bytes: st.size };
+	} catch {
+		return undefined;
+	}
+};
 
 async function main(): Promise<void> {
 	// --- crash safety net — installed before anything can throw ----------------
@@ -1525,6 +1549,28 @@ async function main(): Promise<void> {
 	// skills — it answers "no skills available" instead of the model hallucinating
 	// a tool that isn't wired)
 	const cliTools = [...createCodingTools(), skillTool];
+	// --- rewind checkpoints (double-ESC, Claude Code style) ------------------
+	// Every chat prompt opens a checkpoint BEFORE its run: the transcript view
+	// + the session-log position + copy-on-first-touch snapshots of every file
+	// the run's write/edit tools modify (captured in beforeToolCall, i.e. BEFORE
+	// the tool executes). Double-ESC / /rewind picks a node and restores
+	// conversation / code / both. Persisted under .puck/checkpoints/<sessionId>/
+	// so a resumed session can still rewind.
+	const CHECKPOINTS_DIR = ".puck/checkpoints";
+	const rewindStore = new RewindStore(CHECKPOINTS_DIR);
+	const rewindHook: LoopHooks = {
+		beforeToolCall: (info): undefined => {
+			if (info.toolCall.name !== "write" && info.toolCall.name !== "edit") return;
+			const raw = (info.args as { path?: unknown } | undefined)?.path;
+			if (typeof raw !== "string") return;
+			// mirror the tools' cwd confinement: only in-project files are rewindable
+			const base = resolve(process.cwd());
+			const abs = resolve(base, raw);
+			if (abs !== base && !abs.startsWith(base + sep)) return;
+			rewindStore.captureFile(abs);
+			return;
+		},
+	};
 	const runtime = {
 		puck: createPuck({
 			model: args.mock ? "mock" : (modelId || "mock"),
@@ -1536,9 +1582,13 @@ async function main(): Promise<void> {
 			session: { dir: SESSIONS_DIR, id: args.sessionId },
 			credentials,
 			agentContext: fullAgentContext,
+			hooks: rewindHook,
 		}),
 	};
 	runtime.puck.subscribe(renderer);
+	// checkpoints are per-session: (re)bind on every agent swap so /resume
+	// reloads that session's persisted nodes and /clear starts clean
+	rewindStore.bind(runtime.puck.session?.id ?? "nosession", runtime.puck.agent.messages);
 	/** Rebuild agent+session (e.g. /resume) and reattach renderer/collector/bar. */
 	const rebuildPuck = (sessionId: string, model?: string): void => {
 		// Imported sessions may carry models outside puck's provider registry
@@ -1562,10 +1612,12 @@ async function main(): Promise<void> {
 			session: { dir: SESSIONS_DIR, id: sessionId },
 			credentials,
 			agentContext: fullAgentContext,
+			hooks: rewindHook,
 		});
 		next.subscribe(renderer);
 		attachCollector(next);
 		runtime.puck = next;
+		rewindStore.bind(next.session?.id ?? "nosession", next.agent.messages);
 		barState.model = args.mock ? "mock" : (next.modelId ?? barState.model);
 		try {
 			barState.ctxWindow = args.mock ? 128_000 : !barState.model ? 0 : resolveModel(barState.model).contextWindow;
@@ -1663,7 +1715,13 @@ async function main(): Promise<void> {
 	barState.ctxTokens = estimateMessageTokens(runtime.puck.agent.messages);
 
 	if (args.prompt) {
-		const result = await runtime.puck.run(args.prompt);
+		// one-shot: @file tokens expand the same way as the REPL (no picker —
+		// there is no interactive line to complete on)
+		const oneShot = expandFileMentions(args.prompt, readMentionFile);
+		if (oneShot.attached.length > 0) {
+			console.log(COLORS.dim + `📎 已附加 @引用文件 ${oneShot.attached.length} 个：${oneShot.attached.map((f) => f.path).join("、")}` + COLORS.reset);
+		}
+		const result = await runtime.puck.run(oneShot.text);
 		if (!result.text) {
 			const failed = result.messages.find((m) => m.role === "assistant" && m.stopReason === "error");
 			if (failed?.role === "assistant") console.error(`error: ${failed.errorMessage}`);
@@ -1710,6 +1768,13 @@ async function main(): Promise<void> {
 	// streaming output, and the AI can never visually cover the user's typing.
 	const queueView: QueueViewState = { active: false, typing: "", queued: [], interjected: 0 };
 	const repaintQueue = (): void => chrome.setQueue(renderQueueRows(queueView, process.stdout.columns || 80));
+	// double-ESC (Claude Code rewind): shared detector for the idle keypress
+	// listener and the QueuedInput escape path — a press during a run and the
+	// confirming press after it settles land in the same window.
+	const escDetector = new DoubleEscDetector(600);
+	// set when the second ESC arrives while a run is still streaming: the run
+	// was already aborted by the first press; open the picker when it settles
+	let rewindAfterRun = false;
 	const queuedInput = new QueuedInput({
 		onQueue: (line) => {
 			queueView.typing = "";
@@ -1731,16 +1796,13 @@ async function main(): Promise<void> {
 			repaintQueue();
 		},
 		onSigint: () => sigintDuringRun(),
-		// ESC while the run is streaming → graceful abort: the in-flight LLM call
-		// returns an aborted assistant message, queued tool calls are closed out
-		// with abort errors, and the transcript stays valid for /resume. Typed
-		// queue rows are preserved (they were submitted, not aborted).
+		// ESC-while-streaming is handled at the byte level (watchStandaloneEsc
+		// above): immediate abort + double-press rewind detection. The keypress
+		// path here stays as a defensive backstop for exotic terminals whose
+		// lone-ESC bytes never surface as data chunks (the abort is idempotent).
 		onEscape: () => {
-			if (!activeRun) return; // idle ESC (e.g. closing the slash popup) — nothing to stop
-			if (runtime.puck.agent.isStreaming) {
-				runtime.puck.agent.abort();
-				process.stdout.write("\n" + COLORS.dim + "⏹ 已停止（Esc）— 输入继续，或 /resume 回看" + COLORS.reset + "\n");
-			}
+			if (!activeRun) return;
+			if (runtime.puck.agent.isStreaming) runtime.puck.agent.abort();
 		},
 		onEcho: (_str, buf) => {
 			queueView.typing = buf;
@@ -1760,8 +1822,109 @@ async function main(): Promise<void> {
 		queueView.interjected = 0;
 		repaintQueue();
 		popup.setEnabled(true);
+		mention.setEnabled(true);
 		promptWithBar();
 		scheduler?.nudge(); // idle point: arm a delayed check for due background tasks
+	};
+	// --- rewind picker (double-ESC / /rewind, Claude Code style) -------------
+	/** Display a restored path relative to cwd when inside it. */
+	const shortRel = (p: string): string => {
+		const cwdFwd = process.cwd().replace(/\\/g, "/").replace(/\/$/, "");
+		const f = p.replace(/\\/g, "/");
+		if (f.toLowerCase().startsWith(cwdFwd.toLowerCase() + "/")) return f.slice(cwdFwd.length + 1);
+		return f;
+	};
+	/** Apply one checkpoint: conversation (transcript + session log) and/or code. */
+	const applyRewind = (cp: Checkpoint, mode: number): void => {
+		const parts: string[] = [];
+		if (mode === 0 || mode === 1) {
+			const p = runtime.puck;
+			p.agent.replaceMessages(cp.messages);
+			p.session?.rewind(cp.sessionCount);
+			// queued lines belong to the abandoned future — drop them with it
+			pendingInputs.length = 0;
+			queueView.queued = [];
+			repaintQueue();
+			barState.ctxTokens = estimateMessageTokens(p.agent.messages);
+			repaintBar();
+			// last-turn summary + title + file trail mirror the kept transcript
+			const msgs = p.agent.messages;
+			let lastUser = -1;
+			for (let i = 0; i < msgs.length; i++) if (msgs[i].role === "user") lastUser = i;
+			if (lastUser >= 0) {
+				const s = summarizeTurn(msgs.slice(lastUser));
+				barState.summary = s.oneLine;
+				renderer.setIdleTitle(s.short ? `puck · ${s.short}` : "puck");
+			} else {
+				barState.summary = "";
+				renderer.setIdleTitle();
+			}
+			repaintSummary();
+			fileTrail.clear();
+			for (const m of msgs) {
+				if (m.role !== "assistant") continue;
+				for (const block of m.content) {
+					if (block.type === "toolCall" && (block.name === "write" || block.name === "edit") && typeof block.arguments?.path === "string") fileTrail.record(block.arguments.path);
+				}
+			}
+			repaintTrail();
+			parts.push(`对话已回退（保留 ${cp.messages.length} 条消息）`);
+		}
+		if (mode === 0 || mode === 2) {
+			const ops = rewindStore.restoreTo(cp.serial);
+			const { restored, deleted, skipped } = applyFileOps(ops);
+			const names = [...restored, ...deleted];
+			for (const n of names) fileTrail.record(n);
+			repaintTrail();
+			parts.push(names.length > 0 ? `代码已恢复 ${names.length} 个文件（${names.slice(0, 3).map(shortRel).join("、")}${names.length > 3 ? " 等" : ""}）` : "代码无变化");
+			if (skipped.length > 0) parts.push(`${skipped.length} 个文件无法恢复（快照缺失/过大）`);
+		}
+		console.log(COLORS.ok + "↩ " + parts.join(" · ") + COLORS.reset);
+	};
+	/**
+	 * The rewind picker: node list → restore-mode choice → apply. Shared by
+	 * double-ESC (idle), double-ESC (run settles after abort) and /rewind.
+	 */
+	const openRewindPicker = async (): Promise<void> => {
+		if (runtime.puck.agent.isStreaming || activeRun) {
+			console.log(COLORS.dim + "本轮还在运行，等结束后再回退" + COLORS.reset);
+			return;
+		}
+		const cps = [...rewindStore.list()].reverse(); // newest first — ↑/↓ starts at the nearest node
+		if (cps.length === 0) {
+			console.log(COLORS.dim + "没有可回退的节点（每轮对话发出前会自动记录一个，含代码快照）" + COLORS.reset);
+			return;
+		}
+		// readline folds the double-ESC into an escape-code prefix; its ~500ms
+		// timeout later emits a GHOST escape keypress that would instantly
+		// cancel the picker (Esc = cancel in selectFromList). Let it expire
+		// unobserved before the picker starts listening.
+		await new Promise((r) => setTimeout(r, 550));
+		wizardActive = true;
+		popup.setEnabled(false);
+		mention.setEnabled(false);
+		try {
+			const items = cps.map((cp) => ({
+				label: `${COLORS.user}你 ›${COLORS.reset} ${clipCp(cp.userText.split("\n")[0] || "(空)", 44)}`,
+				detail: `${relativeTime(cp.at)} · 保留 ${cp.agentCount} 条消息${cp.files.length > 0 ? ` · 改动 ${cp.files.length} 个文件` : ""}`,
+			}));
+			const idx = await selectFromList(rl, "回退到哪个节点？（选中一条消息 = 回到它发出之前）", items, { askLine, hint: "↑/↓ 选择 · Enter 确认 · q 取消" });
+			if (idx < 0) return;
+			const cp = cps[idx];
+			const brief = clipCp(cp.userText.split("\n")[0] || "空", 20);
+			const mode = await selectFromList(rl, `恢复什么？（回到「${brief}」之前）`, [
+				{ label: "对话 + 代码", detail: "上下文回退，文件一并恢复" },
+				{ label: "仅对话", detail: "只回退上下文（文件保持现状）" },
+				{ label: "仅代码", detail: "只恢复文件（上下文保持现状）" },
+			], { askLine, hint: "↑/↓ 选择 · Enter 确认 · q 取消" });
+			if (mode < 0) return;
+			applyRewind(cp, mode);
+		} finally {
+			wizardActive = false;
+			popup.setEnabled(true);
+			mention.setEnabled(true);
+			promptWithBar();
+		}
 	};
 	// --- background tasks (daily summary & friends) --------------------------
 	// Run only when the REPL is interactive and idle; never blocks input.
@@ -1801,7 +1964,41 @@ async function main(): Promise<void> {
 	// the main handler below so the popup is cleared before command output prints
 	const popup = new SlashPopup(rl, SLASH_COMMANDS, "\x1b[36myou ›\x1b[0m ", repaintBar);
 	popup.attach();
-	beforeLine.run = () => popup.onLineSubmit(); // wipe BEFORE the line is processed
+	// @-mention file picker (codex-style): typing "@" opens a live file menu —
+	// the project tree is indexed asynchronously (progressive, cached) and the
+	// query after "@" fuzzy-filters it; ↑/↓ pick, Tab/Enter insert the path.
+	// While open it shadows history ↑/↓ and disables the slash popup (the two
+	// menus are mutually exclusive: "/" lines never open the mention popup).
+	const fileIndex = new FileIndex(process.cwd());
+	const mention = new MentionPopup(rl, fileIndex, {
+		prompt: "\x1b[36myou ›\x1b[0m ",
+		isEnabled: () => replStarted && !wizardActive && !activeRun,
+		onActiveChange: (on) => popup.setEnabled(!on),
+	});
+	mention.attach();
+	// ESC semantics live at the raw-byte level (see watchStandaloneEsc): the
+	// keypress parser folds a quick double-ESC into a meta prefix and only
+	// emits after its ~500ms timeout, so keypress events can't drive this.
+	//   idle:  double-ESC → rewind picker (Claude Code)
+	//   run:  first ESC aborts immediately (no timeout lag); a second press
+	//         inside the window flags rewindAfterRun → picker opens when the
+	//         aborted run settles
+	watchStandaloneEsc((rl as unknown as { input: NodeJS.ReadableStream }).input, () => {
+		if (activeRun) {
+			if (escDetector.press()) rewindAfterRun = true;
+			if (runtime.puck.agent.isStreaming) {
+				runtime.puck.agent.abort();
+				process.stdout.write("\n" + COLORS.dim + "⏹ 已停止（Esc）— 输入继续，或 /resume 回看" + COLORS.reset + "\n");
+			}
+			return;
+		}
+		if (!replStarted || wizardActive) return;
+		if (escDetector.press()) void openRewindPicker();
+	});
+	beforeLine.run = () => {
+		popup.onLineSubmit(); // wipe BEFORE the line is processed
+		mention.onLineSubmit();
+	};
 	// rl.prompt() clears below the prompt row (wipes the bar) — always repaint
 	const promptWithBar = (): void => {
 		rl.prompt();
@@ -1897,6 +2094,7 @@ async function main(): Promise<void> {
 				memory: { home, store: conversationStore, sources: memorySources, scheduler },
 				skillIndex,
 				args,
+				onRewind: () => openRewindPicker(),
 				thinking: {
 					get: () => thinkingEffort,
 					set: (e) => {
@@ -1974,10 +2172,17 @@ async function main(): Promise<void> {
 			return;
 		}
 		popup.setEnabled(false);
+		mention.setEnabled(false);
 		// queued lines bypassed readline's own echo — show which ask this run answers
 		if (opts.fromQueue) process.stdout.write(COLORS.user + "you ›" + COLORS.reset + " " + input + "\n");
 		// turn divider (session border) — separates runs in scrollback
 		process.stdout.write(COLORS.dim + "─".repeat(Math.min(process.stdout.columns || 80, 80)) + COLORS.reset + "\n");
+		// @file tokens → file content is appended to the user message (the model
+		// sees the file without a read round-trip); raw input keeps echoing above
+		const expansion = expandFileMentions(input, readMentionFile);
+		if (expansion.attached.length > 0) {
+			process.stdout.write(COLORS.dim + `📎 已附加 @引用文件 ${expansion.attached.length} 个：${expansion.attached.map((f) => f.path).join("、")}` + COLORS.reset + "\n");
+		}
 		const runPrefix = COLORS.user + "puck ›" + COLORS.reset + " ";
 		renderer.beginRun(runPrefix); // anchor the inline stats at Enter
 		process.stdout.write(runPrefix);
@@ -1988,9 +2193,13 @@ async function main(): Promise<void> {
 		queueView.typing = ""; // QueuedInput.attach() drops its buffer — mirror it
 		queueView.interjected = 0; // per-run counter — the previous run's interjections are done
 		repaintQueue();
+		// rewind checkpoint opens NOW: transcript view + session-log position as
+		// they are just BEFORE this prompt runs (files snapshot lazily on first
+		// write/edit via the beforeToolCall hook). Recorded even if the run aborts.
+		rewindStore.begin(input, runtime.puck.agent.messages, runtime.puck.session?.messages.length ?? runtime.puck.agent.messages.length);
 		queuedInput.attach(rl);
 		activeRun = runtime.puck
-			.run(input)
+			.run(expansion.text)
 			.catch((error: unknown) => {
 				logError("run", error);
 				console.error(`error: ${error instanceof Error ? error.message : String(error)}`);
@@ -1998,6 +2207,14 @@ async function main(): Promise<void> {
 			.then(() => {
 				activeRun = undefined;
 				queuedInput.detach(rl);
+				rewindStore.finish(); // checkpoint complete — files captured so far are restorable
+				// double-ESC during the run: first ESC aborted it, the second asked for
+			// the picker — open it now, then drain whatever is still queued
+				if (rewindAfterRun) {
+					rewindAfterRun = false;
+					void openRewindPicker().then(() => drainQueued());
+					return;
+				}
 				drainQueued();
 			});
 	};

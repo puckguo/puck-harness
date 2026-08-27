@@ -54,7 +54,25 @@ interface ClearedEntry {
 	at: number;
 }
 
-type Entry = HeaderEntry | MessageEntry | CompactionEntry | ClearedEntry;
+/**
+ * Marker written by rewind (double-ESC / /rewind): the live context was
+ * rolled back to the first `keepMessages` message entries. Replay applies
+ * the truncation, so the post-rewind conversation is what loads — the
+ * dropped tail stays on disk (the log stays append-only; nothing is lost,
+ * same philosophy as `cleared`). `compactions` is the compaction count as
+ * of the rewound moment, so counters rewind with the transcript.
+ */
+interface RewindEntry {
+	type: "rewind";
+	seq: number;
+	at: number;
+	/** Message entries kept by this rewind (transcript truncation point). */
+	keepMessages: number;
+	/** Compaction count as of the rewound moment. */
+	compactions: number;
+}
+
+type Entry = HeaderEntry | MessageEntry | CompactionEntry | ClearedEntry | RewindEntry;
 
 /** Session summary for pickers (computed by scanning the log; no index file). */
 export interface SessionStats {
@@ -147,6 +165,12 @@ export class Session {
 			} else if (entry.type === "cleared") {
 				clearedAt = Math.max(clearedAt, entry.at);
 				nextSeq = Math.max(nextSeq, entry.seq + 1);
+			} else if (entry.type === "rewind") {
+				// apply the rollback: keep the prefix, drop the abandoned tail;
+				// compactions recorded after the rewound moment are void too
+				messages.length = Math.min(messages.length, Math.max(0, entry.keepMessages));
+				compactions = entry.compactions;
+				nextSeq = Math.max(nextSeq, entry.seq + 1);
 			}
 		}
 
@@ -203,6 +227,23 @@ export class Session {
 		const at = Date.now();
 		const entry: ClearedEntry = { type: "cleared", seq: this.nextSeq++, at };
 		this.liveClearedAt = Math.max(this.liveClearedAt, at);
+		appendFileSync(this.path, `${JSON.stringify(entry)}\n`, "utf8");
+	}
+
+	/**
+	 * Rewind the live transcript to its first `keepMessages` messages and
+	 * persist the rollback as a `rewind` entry (replay re-applies it, so the
+	 * truncation survives restarts and /resume). `compactions` is the
+	 * compaction count as of the rewound moment — the caller has it on the
+	 * checkpoint; omit it to keep the current count.
+	 */
+	rewind(keepMessages: number, compactions: number = this.compactionCount): void {
+		this.entries = this.entries.slice(0, Math.max(0, keepMessages));
+		// counters rewind with the transcript: disk-side counts clamp, the rest
+		// is carried by the live counter
+		this.loadedCompactions = Math.min(this.loadedCompactions, compactions);
+		this.liveCompactions = Math.max(0, compactions - this.loadedCompactions);
+		const entry: RewindEntry = { type: "rewind", seq: this.nextSeq++, at: Date.now(), keepMessages, compactions };
 		appendFileSync(this.path, `${JSON.stringify(entry)}\n`, "utf8");
 	}
 
@@ -311,12 +352,12 @@ function scanStats(path: string): SessionStats {
 	let model: string | undefined;
 	let cwd: string | undefined;
 	let title = "(空会话)";
-	let turns = 0;
-	let assistantMessages = 0;
-	let toolCalls = 0;
 	let compactions = 0;
 	let clearedAt = 0;
 	let lastAt = 0;
+	// message-derived counters come from the FINAL (post-rewind) view: a
+	// rewind entry truncates the virtual transcript, exactly like load()
+	const messages: Message[] = [];
 
 	for (const line of lines) {
 		if (!line.trim()) continue;
@@ -335,22 +376,33 @@ function scanStats(path: string): SessionStats {
 		} else if (entry.type === "message") {
 			const m = entry.message;
 			lastAt = m.timestamp ?? lastAt;
-			if (m.role === "user") {
-				turns++;
-				const text = typeof m.content === "string" ? m.content : "";
-				if (title === "(空会话)" && text.trim() && !text.startsWith("[Context compaction]")) {
-					title = text.replace(/\s+/g, " ").trim().slice(0, 40);
-				}
-			} else if (m.role === "assistant") {
-				assistantMessages++;
-				toolCalls += m.content.filter((c) => c.type === "toolCall").length;
-			}
+			messages.push(m);
 		} else if (entry.type === "compaction") {
 			compactions++;
 			lastAt = entry.at;
 		} else if (entry.type === "cleared") {
 			clearedAt = Math.max(clearedAt, entry.at);
 			lastAt = entry.at;
+		} else if (entry.type === "rewind") {
+			messages.length = Math.min(messages.length, Math.max(0, entry.keepMessages));
+			compactions = entry.compactions;
+			lastAt = entry.at;
+		}
+	}
+	// derive the picker counters from the surviving conversation
+	let turns = 0;
+	let assistantMessages = 0;
+	let toolCalls = 0;
+	for (const m of messages) {
+		if (m.role === "user") {
+			turns++;
+			const text = typeof m.content === "string" ? m.content : "";
+			if (title === "(空会话)" && text.trim() && !text.startsWith("[Context compaction]")) {
+				title = text.replace(/\s+/g, " ").trim().slice(0, 40);
+			}
+		} else if (m.role === "assistant") {
+			assistantMessages++;
+			toolCalls += m.content.filter((c) => c.type === "toolCall").length;
 		}
 	}
 	updatedAt = lastAt || statMtime(path);

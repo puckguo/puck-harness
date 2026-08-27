@@ -4,7 +4,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
 [![Node ≥ 22.18](https://img.shields.io/badge/node-%E2%89%A522.18-brightgreen)](./package.json)
-[![Tests](https://img.shields.io/badge/tests-150%20pass-success)](./tests)
+[![Tests](https://img.shields.io/badge/tests-200%20pass-success)](./tests)
 [![Zero deps](https://img.shields.io/badge/runtime%20deps-0-blueviolet)](./packages/core)
 [![npm version](https://img.shields.io/npm/v/puck-harness.svg)](https://www.npmjs.com/package/puck-harness)
 [![GitHub stars](https://img.shields.io/github/stars/puckguo/puck-harness)](https://github.com/puckguo/puck-harness)
@@ -23,7 +23,7 @@ const puck = createPuck({ model: "deepseek-chat", tools: "coding" });
 const { text } = await puck.run("解释一下这个仓库");
 ```
 
-**150 个测试全部离线通过 · 零网络 · 0 运行时依赖**
+**200 个测试全部离线通过 · 零网络 · 0 运行时依赖**
 
 [English](#english) · [对比表](#puck-vs-其他-agent-harness) · [架构](#架构) · [安装](#安装) · [使用](#使用)
 
@@ -196,6 +196,7 @@ puck "读一下 package.json，总结这个项目"
 puck --model deepseek-chat "重构 src/utils.ts"
 puck /login anthropic                        # 存 API key 到 ~/.puck/auth.json
 puck /resume                                 # 合并显示 puck + pi + claude + codex 会话
+puck /rewind                                 # 回退到之前任一节点（双击 Esc 同样触发）
 puck /clear                                  # 清空当前会话（标记而非删除）
 puck /status
 puck /help
@@ -216,8 +217,10 @@ puck /quit
 ```
 
 - **上一轮任务总结**：每轮结束自动生成——终端标题栏放短语（≤ 10 字），底栏放一句话结果（含改动文件、成败）；`/resume` 恢复会话时也会重建这个总结，接上上次的工作
+- **@文件引用**：输入 `@` 触发项目文件索引（子目录递归、递进式加载），按名称片段模糊匹配、匹配度排序，↑/↓ 选择 Tab/Enter 插入；提交时自动附加所引文件内容（codex 同款交互）
 - **文件足迹**：agent 触碰过的文件实时列在底栏，review 改动不用猜
 - **队列输入**：agent 运行中直接打字，下一轮自动送入；以 `!` 或 `！` 开头则立即插队，打断当前轮把消息送进去
+- **双击 Esc 回退**：Claude Code 同款——每轮对话发出前自动记录节点（transcript + 会话日志位置 + 该轮改动文件的首次前快照）；双击 Esc 或 `/rewind` 选择任一节点，对话、会话与代码可分别或一起恢复，/resume 后仍可继续回退
 - **终端标题动画**：运行时显示"puck · 正在做的事"，空闲时显示上一轮总结
 
 ### 记忆系统

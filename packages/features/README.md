@@ -16,6 +16,7 @@ npm install @puckguo123/features @puckguo123/core
 | `@puckguo123/features/subagent` | Spawn child agents (for "use opus to refactor this file" patterns) |
 | `@puckguo123/features/skills` | Markdown skill loading — `agent.md` files in cwd or `~/.puck/skills/` |
 | `@puckguo123/features/approval` | Pre-tool-execution approval prompt (for high-risk bash commands) |
+| `@puckguo123/features/rewind` | Claude-Code-style double-ESC checkpoints — rewind conversation and/or code to any earlier user prompt |
 
 ## Quick start
 

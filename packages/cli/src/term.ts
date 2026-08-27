@@ -730,6 +730,11 @@ export class FileTrail {
 		while (this.paths.length > 30) this.paths.pop();
 	}
 
+	/** Drop everything (rewind re-derives the trail from the kept transcript). */
+	clear(): void {
+		this.paths.length = 0;
+	}
+
 	/** Newest first snapshot. */
 	list(): string[] {
 		return [...this.paths];
@@ -782,6 +787,81 @@ export interface SelectOptions {
  *   pipe: numeric line input (back-compat with scripted flows)
  * Resolves: selected index, or cancelResult (-1 default), or an extraKeys value.
  */
+// ---------------------------------------------------------------------------
+// double-ESC detection (rewind trigger, Claude Code style)
+// ---------------------------------------------------------------------------
+
+/**
+ * Two ESC keypresses within a short window → one "double press" event.
+ * Pure (injectable clock) so the trigger window is unit-testable. Feeding a
+ * non-ESC key is the host's business — this class only timestamps presses.
+ */
+export class DoubleEscDetector {
+	private lastAt = 0;
+
+	constructor(
+		private readonly windowMs = 600,
+		private readonly now: () => number = Date.now,
+	) {}
+
+	/** Register one ESC press; true when the previous press landed inside the window. */
+	press(): boolean {
+		const t = this.now();
+		if (this.lastAt > 0 && t - this.lastAt <= this.windowMs) {
+			this.lastAt = 0; // consumed — a third press starts a fresh window
+			return true;
+		}
+		this.lastAt = t;
+		return false;
+	}
+
+	/** Forget the pending press (e.g. a run started — don't chain across it). */
+	reset(): void {
+		this.lastAt = 0;
+	}
+}
+
+/**
+ * Detect standalone ESC keypresses at the raw-byte level.
+ *
+ * Why not keypress events: readline's keypress parser folds a lone ESC into
+ * an escape-code prefix — a quick double press emits NO escape event (the
+ * second ESC is swallowed and the next char would turn meta), and a slow
+ * double press only emits after the ~500ms escapeCodeTimeout. The byte level
+ * sees every ESC the terminal delivers, immediately.
+ *
+ * A chunk that is exactly "\x1b" counts as one press. Any following bytes
+ * within `seqGraceMs` cancel it — a split escape sequence ("\x1b" + "[A")
+ * must not register as an ESC press. Returns a detach function.
+ */
+export function watchStandaloneEsc(
+	input: NodeJS.ReadableStream,
+	onPress: () => void,
+	seqGraceMs = 50,
+): () => void {
+	let timers: NodeJS.Timeout[] = [];
+	const onData = (chunk: string | Buffer): void => {
+		const bytes = typeof chunk === "string" ? Buffer.from(chunk, "latin1") : chunk;
+		const alone = bytes.length === 1 && bytes[0] === 0x1b;
+		if (alone) {
+			const timer = setTimeout(() => {
+				timers = timers.filter((t) => t !== timer);
+				onPress();
+			}, seqGraceMs);
+			timers.push(timer);
+		} else if (timers.length > 0) {
+			// a split sequence's tail — the pending ESC was its first byte
+			for (const t of timers) clearTimeout(t);
+			timers = [];
+		}
+	};
+	input.on("data", onData);
+	return () => {
+		input.off("data", onData);
+		for (const t of timers) clearTimeout(t);
+	};
+}
+
 // ---------------------------------------------------------------------------
 // queued-input view (pinned rows) — pure, unit-testable
 // ---------------------------------------------------------------------------

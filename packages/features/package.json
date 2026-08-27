@@ -1,7 +1,7 @@
 {
 	"name": "@puckguo123/features",
 	"version": "0.2.0",
-	"description": "puck optional features: compaction, subagent, skills, approval. Each subpath is independent and deletable.",
+	"description": "puck optional features: compaction, subagent, skills, approval, rewind. Each subpath is independent and deletable.",
 	"type": "module",
 	"exports": {
 		"./compaction": {
@@ -20,6 +20,10 @@
 			"types": "./dist/approval/index.d.ts",
 			"default": "./dist/approval/index.js"
 		},
+		"./rewind": {
+			"types": "./dist/rewind/index.d.ts",
+			"default": "./dist/rewind/index.js"
+		},
 		"./package.json": "./package.json"
 	},
 	"files": [
@@ -33,7 +37,8 @@
 		"compaction",
 		"subagent",
 		"skills",
-		"approval"
+		"approval",
+		"rewind"
 	],
 	"license": "MIT",
 	"repository": {
