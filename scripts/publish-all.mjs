@@ -122,7 +122,9 @@ try {
 		const label = `${m.name}@${m.version}`;
 		console.log(`\n→ ${label}  (${m.dir})`);
 		const args = DRY ? ["publish", "--dry-run", "--access", "public"] : ["publish", "--access", "public"];
-		const r = spawnSync("npm", args, { cwd: join(PKGS, m.dir), stdio: "inherit" });
+		// shell:true — Node 22.x on win32 returns EINVAL spawning npm.cmd directly
+		// (spawn "npm" alone fails ENOENT: no .cmd resolution without the shell)
+		const r = spawnSync("npm " + args.join(" "), { cwd: join(PKGS, m.dir), stdio: "inherit", shell: true });
 		if (r.status !== 0) {
 			console.error(`\n❌ ${label} publish 失败（exit ${r.status}）。`);
 			if (!DRY) {
