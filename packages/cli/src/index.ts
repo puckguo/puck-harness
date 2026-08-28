@@ -23,7 +23,7 @@ import { createIndexedSkillTool, loadHarnessSkillsIndexed, skillsIndexToPrompt, 
 import { createMockStreamFn, createStreamFn, discoverUsableModels, FileCredentialStore, findProvider, listModels, listProviders, loginProvider, logoutProvider, PROVIDERS, resolveApiKey, resolveModel, resolveProviderApiKey } from "@puckguo123/llm";
 import { createPuck, DEFAULT_CODING_PROMPT, getDefaultModel, setDefaultModel } from "@puckguo123/sdk";
 import { createCodingTools } from "@puckguo123/tools";
-import { SessionStore } from "@puckguo123/session";
+import { Session, SessionStore, scanForeignSessions } from "@puckguo123/session";
 import { ConversationStore } from "@puckguo123/store";
 import { IdleTaskScheduler, loadAgentContext, memoryStats, runDailySummary, runLongTermDistill, type ContextSource } from "@puckguo123/memory";
 import { importExternalSession, scanExternalSessions, type ExternalSessionInfo, type ImportSource, cwdMatches } from "@puckguo123/session/import";
@@ -33,7 +33,7 @@ import { homedir } from "node:os";
 import { buildBar, renderBar, renderEditDiff, renderToolEnd, SlashPopup, Spinner, TerminalChrome, FileTrail, renderTrail, selectFromList, queryCursorPosition, WorkingTitle, formatTokens, summarizeTurn, QueuedInput, clipCp, renderQueueRows, parseInterject, DoubleEscDetector, watchStandaloneEsc, type SlashCommand, type TurnSummary, type QueueViewState } from "./term.js";
 import { errorLogPath, logError } from "./errorlog.js";
 import { expandFileMentions, FileIndex, MentionPopup, type ReadFileResult } from "./filemention.js";
-import { mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { basename, dirname, join, resolve, sep } from "node:path";
 import { randomUUID } from "node:crypto";
 import { puckDir } from "@puckguo123/llm";
@@ -48,7 +48,7 @@ const SLASH_COMMANDS: SlashCommand[] = [
 	{ name: "compact", desc: "手动压缩上下文（摘要折叠旧对话，保留最近轮）" },
 	{ name: "clear", desc: "清空上下文，开始新对话（原会话保留在磁盘，可 /resume 找回）" },
 	{ name: "rewind", desc: "回退到之前的节点（双击 Esc 同样触发）：对话 / 代码 / 两者" },
-	{ name: "resume", desc: "选择一个历史会话继续对话（puck + pi/codex/claude 合并，默认当前项目（含外部会话），a 切全部目录）" },
+	{ name: "resume", desc: "选择一个历史会话继续对话（默认当前项目；a 切全部目录：各项目的 puck + pi/codex/claude）" },
 	{ name: "memory", desc: "记忆系统：agent.md / experience / 每日总结" },
 	{ name: "skills", desc: "已加载的技能清单（来自 ~/.puck · ~/.claude · ~/.codex · ~/.pi 的 skills 目录）" },
 	{ name: "tasks", desc: "后台任务目录与状态（每日总结等，空闲时运行）" },
@@ -490,6 +490,46 @@ function baseNameOf(path: string): string {
 	return parts[parts.length - 1];
 }
 
+/** Rows of the global session index (~/.puck/index.db) for cross-project
+ * /resume discovery. Prefers the already-open store from the memory layer;
+ * otherwise opens the db directly — but only when the file exists, so
+ * --no-memory runs never create an index as a side effect of /resume. */
+async function indexSessionRows(context: { memory?: { store: ConversationStore | null } }): Promise<Array<{ id: string; project: string }>> {
+	let store = context.memory?.store ?? null;
+	let opened = false;
+	if (!store) {
+		const dbPath = join(puckDir(), "index.db");
+		if (!existsSync(dbPath)) return [];
+		store = await ConversationStore.open(dbPath);
+		opened = true;
+	}
+	if (!store) return [];
+	try {
+		return store.allSessions().flatMap((r) => (r.id && r.project ? [{ id: r.id, project: r.project }] : []));
+	} catch {
+		return [];
+	} finally {
+		if (opened) store.close();
+	}
+}
+
+/** Project dir a session FILE belongs to, for the canonical
+ * `<project>/.puck/sessions/<id>.jsonl` layout. Undefined for non-standard
+ * store depths (SDK users may pass any dir) — callers then fall back to
+ * process.cwd(). */
+function sessionProjectOf(session: { path: string } | undefined): string | undefined {
+	if (!session?.path) return undefined;
+	try {
+		const file = resolve(session.path);
+		const sessionsDir = dirname(file); // .../<project>/.puck/sessions
+		const dotPuck = dirname(sessionsDir); // .../<project>/.puck
+		if (basename(dotPuck) !== ".puck" || basename(sessionsDir) !== "sessions") return undefined;
+		return dirname(dotPuck);
+	} catch {
+		return undefined;
+	}
+}
+
 /** Result of resuming an external session (used by resumePicker). */
 type ResumedSession = { id: string; model?: string };
 
@@ -500,7 +540,10 @@ type ResumedSession = { id: string; model?: string };
  *   project are hidden, matching pi's default behavior so unrelated history
  *   doesn't drown out the conversation you actually want to resume.
  * - Toggle `a`: switch to "all cwds" — full cross-project browse, with each
- *   session's cwd shown in the detail row.
+ *   session's cwd shown in the detail row. Puck sessions from OTHER projects
+ *   are discovered through the global index (~/.puck/index.db), so a folder
+ *   with no local .puck/sessions still shows puck's own other-folder history
+ *   alongside pi/codex/claude — not externals only.
  * - Toggle `r`: re-scan external harness stores (catches new pi/codex/claude
  *   sessions created since the last /resume).
  *
@@ -518,7 +561,7 @@ async function resumePicker(
 		onContextTokens?: (tokens: number) => void;
 		onClear?: () => void;
 		onModelChange?: (id: string) => void;
-		onResume?: (id: string, model: string | undefined, stats: { turns: number; compactions: number; title: string }) => Promise<void> | void;
+		onResume?: (id: string, model: string | undefined, stats: { turns: number; compactions: number; title: string; sessionPath?: string }) => Promise<void> | void;
 		memory?: { home: string; store: ConversationStore | null; sources: ContextSource[]; scheduler: IdleTaskScheduler | undefined };
 	},
 ): Promise<boolean> {
@@ -551,6 +594,10 @@ async function resumePicker(
 		/** Resolved working directory for display + scope match (pi/codex: raw
 		 * cwd, claude: cwd slug, puck: header `cwd`, undefined: unknown). */
 		cwd?: string;
+		/** Absolute session-file path for puck sessions living in ANOTHER
+		 * project's store — resuming must load/append the original file, not
+		 * create a fresh one in the local .puck/sessions. */
+		sessionPath?: string;
 		externalInfo?: ExternalSessionInfo;
 	};
 
@@ -560,6 +607,33 @@ async function resumePicker(
 		if (seen.has(s.id)) continue;
 		seen.add(s.id);
 		entries.push({ source: "puck", id: s.id, title: s.title, turns: s.turns, assistantMessages: s.assistantMessages, toolCalls: s.toolCalls, compactions: s.compactions, cleared: s.cleared, clearedAt: s.clearedAt, model: s.model, updatedAt: s.updatedAt, cwd: s.cwd });
+	}
+	// Cross-project puck sessions: the local store only covers the current
+	// folder, so without this scan a project with no puck sessions would show
+	// ONLY pi/codex/claude history — puck's own other-folder sessions stayed
+	// invisible. The global index (~/.puck/index.db) knows every session's
+	// project; rows are verified against the filesystem before use.
+	for (const hit of scanForeignSessions(await indexSessionRows(context), cwd)) {
+		const s = hit.stats;
+		if (seen.has(s.id) || s.id === context.puck.session?.id || s.turns <= 0) continue;
+		seen.add(s.id);
+		entries.push({
+			source: "puck",
+			id: s.id,
+			title: s.title,
+			turns: s.turns,
+			assistantMessages: s.assistantMessages,
+			toolCalls: s.toolCalls,
+			compactions: s.compactions,
+			cleared: s.cleared,
+			clearedAt: s.clearedAt,
+			model: s.model,
+			updatedAt: s.updatedAt,
+			// header cwd when the file carries one; otherwise derive from the
+			// canonical `<project>/.puck/sessions/<id>.jsonl` layout
+			cwd: s.cwd ?? dirname(dirname(dirname(hit.path))),
+			sessionPath: hit.path,
+		});
 	}
 	for (const e of external) {
 		const id = externalSessionId(e);
@@ -571,7 +645,7 @@ async function resumePicker(
 
 	if (entries.length === 0) {
 		console.log("没有其他历史会话（当前会话不列出）。每轮对话自动保存到 .puck/sessions/");
-		console.log("也扫描了 ~/.claude · ~/.pi · ~/.codex — 均无可导入会话。");
+		console.log("也扫描了 ~/.puck/index.db（其它项目的 puck 会话）· ~/.claude · ~/.pi · ~/.codex — 均无可恢复会话。");
 		return true;
 	}
 
@@ -699,6 +773,7 @@ async function resumeScopePicker(
 		model?: string;
 		updatedAt: number;
 		cwd?: string;
+		sessionPath?: string;
 		externalInfo?: ExternalSessionInfo;
 	}>,
 	currentOnly: boolean,
@@ -821,7 +896,7 @@ async function handleSlashCommand(
 		onContextTokens?: (tokens: number) => void;
 		onClear?: () => void;
 		onModelChange?: (id: string) => void;
-		onResume?: (id: string, model: string | undefined, stats: { turns: number; compactions: number; title: string }) => Promise<void> | void;
+		onResume?: (id: string, model: string | undefined, stats: { turns: number; compactions: number; title: string; sessionPath?: string }) => Promise<void> | void;
 		memory?: { home: string; store: ConversationStore | null; sources: ContextSource[]; scheduler: IdleTaskScheduler | undefined };
 		skillIndex?: SkillIndex;
 		args?: { noSkills: boolean };
@@ -1589,8 +1664,24 @@ async function main(): Promise<void> {
 	// checkpoints are per-session: (re)bind on every agent swap so /resume
 	// reloads that session's persisted nodes and /clear starts clean
 	rewindStore.bind(runtime.puck.session?.id ?? "nosession", runtime.puck.agent.messages);
-	/** Rebuild agent+session (e.g. /resume) and reattach renderer/collector/bar. */
-	const rebuildPuck = (sessionId: string, model?: string): void => {
+	/** Load a puck session file by absolute path (cross-project /resume).
+	 * Returns undefined when no path is given or the file vanished — the
+	 * caller then falls back to the local store. */
+	const foreignSession = (sessionPath: string | undefined): Session | undefined => {
+		if (!sessionPath) return undefined;
+		try {
+			return Session.load(sessionPath);
+		} catch {
+			console.log(COLORS.dim + `会话文件已不存在（${basename(sessionPath)}），改为本地会话` + COLORS.reset);
+			return undefined;
+		}
+	};
+
+	/** Rebuild agent+session (e.g. /resume) and reattach renderer/collector/bar.
+	 * `sessionPath` resumes a puck session file from ANOTHER project (found via
+	 * the global index): the original file is loaded and appends keep flowing
+	 * back to it, so the session stays whole wherever it lives. */
+	const rebuildPuck = (sessionId: string, model?: string, sessionPath?: string): void => {
 		// Imported sessions may carry models outside puck's provider registry
 		// (e.g. zai-coding-cn/glm-5.3) — fall back to the current model, and say so.
 		let effective = model;
@@ -1606,10 +1697,13 @@ async function main(): Promise<void> {
 			model: args.mock ? "mock" : (effective ?? modelId ?? "mock"),
 			streamFn: args.mock ? createMockStreamFn(MOCK_SCRIPT) : undefined,
 			tools: cliTools,
+			// a foreign session file is loaded from its own path (falling back to
+			// the local store when it disappeared mid-flight); local resumes keep
+			// the {dir,id} form so new-session creation semantics stay unchanged
+			session: foreignSession(sessionPath) ?? { dir: SESSIONS_DIR, id: sessionId },
 			// new session files created by /clear get the same cwd stamp as fresh
 			// starts, so they stay findable by /resume's cwd filter
 			cwd: process.cwd(),
-			session: { dir: SESSIONS_DIR, id: sessionId },
 			credentials,
 			agentContext: fullAgentContext,
 			hooks: rewindHook,
@@ -1673,7 +1767,11 @@ async function main(): Promise<void> {
 		if (!conversationStore || !p.session) return;
 		const store = conversationStore;
 		const sid = p.session.id;
-		const project = process.cwd();
+		// The index row must keep pointing at the project the FILE lives in, not
+		// the cwd it was resumed from — otherwise a cross-project resume would
+		// re-stamp the row to the new folder and the session would turn invisible
+		// to /resume's foreign scan (its file never moved).
+		const project = sessionProjectOf(p.session) ?? process.cwd();
 		store.touchSession(sid, { model: p.modelId ?? undefined, project });
 		let titled = false;
 		detachRecorder = p.subscribe((event) => {
@@ -2130,7 +2228,7 @@ async function main(): Promise<void> {
 					console.log(COLORS.ok + `上下文已清空，开始新对话（原会话 ${previous ? previous.id.slice(0, 8) + "… " : ""}保留，/resume 可找回）` + COLORS.reset);
 				},
 				onResume: async (id, model, stats) => {
-					rebuildPuck(id, model ?? (args.mock ? "mock" : undefined));
+					rebuildPuck(id, model ?? (args.mock ? "mock" : undefined), stats.sessionPath);
 					const compact = stats.compactions > 0 ? ` · 历史压缩 ×${stats.compactions}` : "";
 					// replay the hydrated transcript into scrollback — same rendering as
 					// live, so the resumed context is visible in the terminal again

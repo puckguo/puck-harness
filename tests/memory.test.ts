@@ -56,6 +56,37 @@ test("store: open, record, search roundtrip", async () => {
 	}
 });
 
+test("store: allSessions lists cross-project rows for /resume's foreign scan", async () => {
+	// Regression for the /resume bug: a folder with no puck sessions showed
+	// only pi/codex/claude history. The fix feeds index rows to
+	// scanForeignSessions; allSessions is the row source and must expose
+	// id+project for every session, newest first, with null projects dropped
+	// by the caller (rows here keep them; the CLI filters).
+	const dir = tmp();
+	const store = await ConversationStore.open(join(dir, "index.db"));
+	assert.ok(store);
+	try {
+		const base = Date.now();
+		store.touchSession("proj-a-1", { title: "a1", project: "/repo/a" }, base);
+		store.touchSession("proj-b-1", { title: "b1", project: "/repo/b" }, base + 1000);
+		store.touchSession("no-project", { title: "legacy" }, base + 2000); // pre-project rows exist
+		const rows = store.allSessions();
+		assert.equal(rows.length, 3);
+		// ordered most-recent first
+		assert.equal(rows[0].id, "no-project");
+		assert.equal(rows[1].id, "proj-b-1");
+		assert.equal(rows[2].id, "proj-a-1");
+		// camelCase mapping + verbatim project strings (paths must round-trip)
+		assert.equal(rows[1].project, "/repo/b");
+		assert.equal(rows[1].title, "b1");
+		assert.equal(typeof rows[1].updatedAt, "number");
+		assert.equal(rows[0].project, null);
+	} finally {
+		store.close();
+		rmSync(dir, { recursive: true, force: true });
+	}
+});
+
 test("store: contextAround returns neighbors and clamps at edges", async () => {
 	const dir = tmp();
 	const store = await ConversationStore.open(join(dir, "index.db"));

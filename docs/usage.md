@@ -108,6 +108,7 @@ REPL 里可用命令：直接输入对话；`exit` / `quit` 退出；斜杠命�
 - **文件轨迹行**：状态栏上方常驻一行 `✎ 最新 ← 较旧`，实时列出本会话 agent 通过 write/edit 创建或修改的文件（重复修改自动提前到最左）。
 - **外部 harness 历史导入**：/resume 合并显示 puck-native + 本机 ~/.claude、~/.pi、~/.codex 的历史会话；外部会话带来源角标（[pi]/[codex]/[claude]），选中后透明导入（copy-on-import，不动原文件；重复导入自动复用）。工具调用按 id/顺序配对，压缩历史无损迁移，无输出悬空的调用会被安全丢弃。按 `r` 重新扫描外部会话。
 - **/resume 默认仅显示当前目录的会话**（复用 pi 的默认行为）：其它项目的会话被隐藏，避免上百条不同项目的历史淹没当前上下文。按 `a` 切换为“全部目录”查看（每条 detail 会多一行 cwd 提示）；再按 `c` 切回。puck-native 会话在创建时记 cwd，外部会话从 pi v3 header / codex session_meta / claude 父目录名读 cwd，筛选使用 hash 一致的 slug 比较（避免有 `-` 的目录名解码歧义）。
+- **全部目录视图包含其它项目的 puck 会话**：puck 的会话文件存在各项目自己的 `.puck/sessions/`，单靠当前目录扫描不到；/resume 通过全局索引 `~/.puck/index.db`（sessions 表的 project 列）发现其它项目的会话，逐条校验文件存在后并入列表——因此当前目录没有 puck 历史时，不会只剩 pi/codex/claude 的外部会话。选中后从**原文件**恢复，后续对话继续追加回原项目（索引行的 project 始终指向文件所在项目，不随恢复位置变）。索引缺失 / node:sqlite 不可用时优雅降级为仅本地 + 外部扫描。
 
 两项均为 TTY-only：管道、一次性 `puck "prompt"` 模式不产生任何转义序列。
 

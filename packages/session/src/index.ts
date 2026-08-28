@@ -343,7 +343,10 @@ export class SessionStore {
 	}
 }
 
-function scanStats(path: string): SessionStats {
+/** Summarize one session file for pickers (any path, any project) — the
+ * same scan statsAll runs per store, exported so /resume can stat session
+ * files that live in OTHER projects' `.puck/sessions` dirs. */
+export function scanStats(path: string): SessionStats {
 	const raw = readFileSync(path, "utf8");
 	const lines = raw.split("\n");
 	let id = "";
@@ -407,6 +410,62 @@ function scanStats(path: string): SessionStats {
 	}
 	updatedAt = lastAt || statMtime(path);
 	return { id, title, createdAt, updatedAt, turns, assistantMessages, toolCalls, compactions, cleared: clearedAt > 0, clearedAt: clearedAt > 0 ? clearedAt : undefined, model, cwd };
+}
+
+/** One row of the global session index (~/.puck/index.db `sessions` table),
+ * reduced to what cross-project discovery needs. */
+export interface ForeignSessionRow {
+	/** Session id — must match the file name `<id>.jsonl`. */
+	id: string;
+	/** Absolute project dir holding `.puck/sessions/<id>.jsonl`. */
+	project: string;
+}
+
+/** A resumable puck session found in another project's store. */
+export interface ForeignSessionHit {
+	stats: SessionStats;
+	/** Absolute path of the session file — resuming appends back here. */
+	path: string;
+}
+
+function sameProject(a: string, b: string): boolean {
+	const norm = (p: string): string =>
+		p.replace(/[\\/]/g, "/").replace(/\/+$/, "").toLowerCase();
+	return norm(a) === norm(b);
+}
+
+/**
+ * Discover puck sessions belonging to OTHER projects for /resume's
+ * cross-project view — the fix for "a folder with no puck sessions shows
+ * only pi/codex/claude history, never puck's own other-folder sessions".
+ *
+ * Per-project stores are the source of truth but cannot be enumerated
+ * without a registry; the global sqlite index records every session's
+ * project, so the caller feeds its rows here and each candidate is verified
+ * against the filesystem: missing files (project moved, sessions cleaned)
+ * are skipped, never fatal. Rows pointing at the current project are
+ * skipped too — its own store is scanned directly, keeping ids deduped.
+ */
+export function scanForeignSessions(rows: ForeignSessionRow[], currentCwd: string): ForeignSessionHit[] {
+	const hits: ForeignSessionHit[] = [];
+	for (const row of rows) {
+		if (!row.id || !row.project) continue;
+		let project: string;
+		try {
+			project = resolve(row.project);
+		} catch {
+			continue;
+		}
+		if (sameProject(project, currentCwd)) continue;
+		const path = join(project, ".puck", "sessions", `${row.id}.jsonl`);
+		if (!existsSync(path)) continue;
+		try {
+			hits.push({ stats: scanStats(path), path });
+		} catch {
+			continue; // unreadable/torn file — skip, never break the picker
+		}
+	}
+	return hits;
 }
 
 function statMtime(path: string): number {

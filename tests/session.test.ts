@@ -7,7 +7,7 @@ import test from "node:test";
 import { appendFileSync, existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { Session, SessionStore } from "@puckguo123/session";
+import { Session, SessionStore, scanForeignSessions } from "@puckguo123/session";
 
 function makeTmpDir(): string {
 	return mkdtempSync(join(tmpdir(), "puck-session-"));
@@ -178,6 +178,55 @@ test("session: store.projectCwd derives the project dir for legacy headerless-cw
 		assert.equal(stats?.cwd ?? store.projectCwd, resolve(project));
 	} finally {
 		rmSync(project, { recursive: true, force: true });
+	}
+});
+
+// Regression for the /resume bug this change fixes: the picker scanned only
+// the current project's .puck/sessions plus external harness stores
+// (~/.claude · ~/.pi · ~/.codex), so a folder with no puck sessions showed
+// ONLY pi/codex/claude history — puck's own other-folder sessions were
+// invisible. scanForeignSessions turns global-index rows into verified
+// filesystem hits so the "all directories" view includes them.
+test("session: scanForeignSessions finds other projects' puck sessions for /resume", () => {
+	const projectA = makeTmpDir();
+	const projectB = makeTmpDir();
+	const here = makeTmpDir();
+	try {
+		const mk = (project: string, id: string, question: string): void => {
+			const s = Session.create(join(project, ".puck", "sessions"), { id, cwd: project });
+			s.append({ role: "user", content: question, timestamp: Date.now() });
+		};
+		mk(projectA, "aaa", "怎么配置 vite 别名");
+		mk(projectB, "bbb", "修一下 CI 的缓存");
+		mk(here, "local", "当前项目的问题"); // current project — covered by its own store
+
+		const hits = scanForeignSessions(
+			[
+				{ id: "aaa", project: projectA },
+			{ id: "bbb", project: projectB },
+				{ id: "local", project: here }, // cwd row → skipped
+				{ id: "gone", project: projectA }, // file missing → skipped
+				{ id: "bad", project: "" }, // no project → skipped
+			],
+			here,
+		);
+		assert.equal(hits.length, 2);
+		assert.deepEqual(hits.map((h) => h.stats.id).sort(), ["aaa", "bbb"]);
+
+		const a = hits.find((h) => h.stats.id === "aaa")!;
+		assert.equal(a.path, join(resolve(projectA), ".puck", "sessions", "aaa.jsonl"));
+		assert.equal(a.stats.turns, 1);
+		assert.equal(a.stats.title, "怎么配置 vite 别名");
+		// header cwd round-trips — the picker uses it for the cwd tag + scope
+		assert.equal(a.stats.cwd, resolve(projectA));
+
+		// cwd matching is slash/case-insensitive (Windows drive casing): a row
+		// pointing back at the current project is never a foreign hit
+		assert.equal(scanForeignSessions([{ id: "local", project: here.toUpperCase() }], here).length, 0);
+	} finally {
+		rmSync(projectA, { recursive: true, force: true });
+		rmSync(projectB, { recursive: true, force: true });
+		rmSync(here, { recursive: true, force: true });
 	}
 });
 

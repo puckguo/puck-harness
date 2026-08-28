@@ -128,6 +128,15 @@ export class ConversationStore {
 		this.touchSession(msg.sessionId, {}, msg.ts);
 	}
 
+	/** Every indexed session row across all projects — /resume's cross-project
+	 * scan feeds these to scanForeignSessions. Ordered most-recent first. */
+	allSessions(): SessionRow[] {
+		const rows = this.db
+			.prepare("SELECT id, title, model, project, created_at, updated_at FROM sessions ORDER BY updated_at DESC")
+			.all() as Array<{ id: string; title: string | null; model: string | null; project: string | null; created_at: number; updated_at: number }>;
+		return rows.map((r) => ({ id: r.id, title: r.title, model: r.model, project: r.project, createdAt: Number(r.created_at), updatedAt: Number(r.updated_at) }));
+	}
+
 	/** Cross-project substring search (LIKE — zero-dep, no FTS dependency). */
 	search(query: string, limit = 8): SearchHit[] {
 		const like = `%${query.replace(/[%_]/g, (c) => "\\" + c)}%`;
