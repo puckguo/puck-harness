@@ -23,7 +23,7 @@ import { createIndexedSkillTool, loadHarnessSkillsIndexed, skillsIndexToPrompt, 
 import { createMockStreamFn, createStreamFn, discoverUsableModels, FileCredentialStore, findProvider, listModels, listProviders, loginProvider, logoutProvider, PROVIDERS, resolveApiKey, resolveModel, resolveProviderApiKey } from "@puckguo123/llm";
 import { createPuck, DEFAULT_CODING_PROMPT, getDefaultModel, setDefaultModel } from "@puckguo123/sdk";
 import { createCodingTools } from "@puckguo123/tools";
-import { Session, SessionStore, scanForeignSessions } from "@puckguo123/session";
+import { Session, SessionStore, projectOfSessionFile, readSessionRegistry, scanForeignSessions, type ForeignSessionRow } from "@puckguo123/session";
 import { ConversationStore } from "@puckguo123/store";
 import { IdleTaskScheduler, loadAgentContext, memoryStats, runDailySummary, runLongTermDistill, type ContextSource } from "@puckguo123/memory";
 import { importExternalSession, scanExternalSessions, type ExternalSessionInfo, type ImportSource, cwdMatches } from "@puckguo123/session/import";
@@ -490,44 +490,48 @@ function baseNameOf(path: string): string {
 	return parts[parts.length - 1];
 }
 
-/** Rows of the global session index (~/.puck/index.db) for cross-project
- * /resume discovery. Prefers the already-open store from the memory layer;
- * otherwise opens the db directly — but only when the file exists, so
- * --no-memory runs never create an index as a side effect of /resume. */
-async function indexSessionRows(context: { memory?: { store: ConversationStore | null } }): Promise<Array<{ id: string; project: string }>> {
+/** Rows for cross-project /resume discovery — union of two global sources:
+ *
+ *  1. ~/.puck/sessions.json registry (primary) — exact absolute paths, kept
+ *     up to date by the session layer itself (Session.create / load), so it
+ *     works even with --no-memory or when node:sqlite is missing.
+ *  2. ~/.puck/index.db sqlite index (secondary) — covers sessions recorded
+ *     before the registry existed. Opened only when the memory layer hasn't
+ *     already, and only if the file exists (--no-memory runs never create an
+ *     index as a side effect of /resume).
+ *
+ * Overlap is fine: scanForeignSessions collapses rows that resolve to the
+ * same file, and the picker dedupes by id after that. */
+async function foreignSessionRows(context: { memory?: { store: ConversationStore | null } }): Promise<ForeignSessionRow[]> {
+	const rows: ForeignSessionRow[] = readSessionRegistry().map((e) => ({ id: e.id, path: e.path }));
 	let store = context.memory?.store ?? null;
 	let opened = false;
 	if (!store) {
 		const dbPath = join(puckDir(), "index.db");
-		if (!existsSync(dbPath)) return [];
-		store = await ConversationStore.open(dbPath);
-		opened = true;
+		if (existsSync(dbPath)) {
+			store = await ConversationStore.open(dbPath);
+			opened = true;
+		}
 	}
-	if (!store) return [];
-	try {
-		return store.allSessions().flatMap((r) => (r.id && r.project ? [{ id: r.id, project: r.project }] : []));
-	} catch {
-		return [];
-	} finally {
-		if (opened) store.close();
+	if (store) {
+		try {
+			for (const r of store.allSessions()) {
+				if (r.id && r.project) rows.push({ id: r.id, project: r.project });
+			}
+		} catch {
+			/* unreadable index → registry rows still stand */
+		} finally {
+			if (opened) store.close();
+		}
 	}
+	return rows;
 }
 
-/** Project dir a session FILE belongs to, for the canonical
- * `<project>/.puck/sessions/<id>.jsonl` layout. Undefined for non-standard
- * store depths (SDK users may pass any dir) — callers then fall back to
- * process.cwd(). */
+/** Project dir a session FILE belongs to (`<project>/.puck/sessions/x.jsonl`
+ * layout). Re-exported helper from the session package; undefined for
+ * non-standard store depths — callers then fall back to process.cwd(). */
 function sessionProjectOf(session: { path: string } | undefined): string | undefined {
-	if (!session?.path) return undefined;
-	try {
-		const file = resolve(session.path);
-		const sessionsDir = dirname(file); // .../<project>/.puck/sessions
-		const dotPuck = dirname(sessionsDir); // .../<project>/.puck
-		if (basename(dotPuck) !== ".puck" || basename(sessionsDir) !== "sessions") return undefined;
-		return dirname(dotPuck);
-	} catch {
-		return undefined;
-	}
+	return session?.path ? projectOfSessionFile(session.path) : undefined;
 }
 
 /** Result of resuming an external session (used by resumePicker). */
@@ -611,9 +615,10 @@ async function resumePicker(
 	// Cross-project puck sessions: the local store only covers the current
 	// folder, so without this scan a project with no puck sessions would show
 	// ONLY pi/codex/claude history — puck's own other-folder sessions stayed
-	// invisible. The global index (~/.puck/index.db) knows every session's
-	// project; rows are verified against the filesystem before use.
-	for (const hit of scanForeignSessions(await indexSessionRows(context), cwd)) {
+	// invisible. Rows come from the global registry (~/.puck/sessions.json,
+	// exact paths) plus the sqlite index; each is verified against the
+	// filesystem before use.
+	for (const hit of scanForeignSessions(await foreignSessionRows(context), cwd)) {
 		const s = hit.stats;
 		if (seen.has(s.id) || s.id === context.puck.session?.id || s.turns <= 0) continue;
 		seen.add(s.id);
@@ -645,7 +650,7 @@ async function resumePicker(
 
 	if (entries.length === 0) {
 		console.log("没有其他历史会话（当前会话不列出）。每轮对话自动保存到 .puck/sessions/");
-		console.log("也扫描了 ~/.puck/index.db（其它项目的 puck 会话）· ~/.claude · ~/.pi · ~/.codex — 均无可恢复会话。");
+		console.log("也扫描了 ~/.puck 全局注册表（其它项目的 puck 会话）· ~/.claude · ~/.pi · ~/.codex — 均无可恢复会话。");
 		return true;
 	}
 

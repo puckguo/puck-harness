@@ -15,7 +15,11 @@
 import type { Message } from "@puckguo123/core";
 import { randomUUID } from "node:crypto";
 import { appendFileSync, existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
+import { registerSessionFile } from "./registry.js";
+
+// re-exported so consumers (CLI /resume) get one import surface
+export { readSessionRegistry, registerSessionFile, registryFile, type SessionRegistryEntry } from "./registry.js";
 
 interface HeaderEntry {
 	type: "header";
@@ -127,13 +131,17 @@ export class Session {
 		this.cwd = header.cwd;
 	}
 
-	/** Create a new session file inside a directory. */
+	/** Create a new session file inside a directory. The file is also entered
+	 * into the global registry (~/.puck/sessions.json) so /resume can find it
+	 * from any project — mirrors how pi/codex/claude sessions are discoverable
+	 * from their central home-dir stores. */
 	static create(dir: string, options: { id?: string; model?: string; systemPrompt?: string; cwd?: string } = {}): Session {
 		mkdirSync(dir, { recursive: true });
 		const id = options.id ?? randomUUID();
 		const path = join(dir, `${id}.jsonl`);
 		const session = new Session({ id, path, createdAt: Date.now(), model: options.model, systemPrompt: options.systemPrompt, cwd: options.cwd });
 		session.flushHeader();
+		registerSessionFile(path, id, options.cwd);
 		return session;
 	}
 
@@ -175,6 +183,10 @@ export class Session {
 		}
 
 		if (!header) throw new Error(`Not a puck session file (missing header): ${path}`);
+		// every load re-registers the file: a resumed session (possibly from
+		// another project) stays discoverable, and its registry entry gets a
+		// fresh timestamp. Never throws — see registry.ts.
+		registerSessionFile(path, header.id, header.cwd);
 		const session = new Session({
 			id: header.id,
 			path,
@@ -412,13 +424,17 @@ export function scanStats(path: string): SessionStats {
 	return { id, title, createdAt, updatedAt, turns, assistantMessages, toolCalls, compactions, cleared: clearedAt > 0, clearedAt: clearedAt > 0 ? clearedAt : undefined, model, cwd };
 }
 
-/** One row of the global session index (~/.puck/index.db `sessions` table),
+/** One row of a global session source (registry entry or index row),
  * reduced to what cross-project discovery needs. */
 export interface ForeignSessionRow {
-	/** Session id — must match the file name `<id>.jsonl`. */
+	/** Session id — must match the file name `<id>.jsonl` when only `project`
+	 * is given (index-style rows). */
 	id: string;
-	/** Absolute project dir holding `.puck/sessions/<id>.jsonl`. */
-	project: string;
+	/** Project dir holding `.puck/sessions/<id>.jsonl` (index-style rows).
+	 * Optional when `path` is provided. */
+	project?: string;
+	/** Absolute session-file path (registry-style rows) — wins over `project`. */
+	path?: string;
 }
 
 /** A resumable puck session found in another project's store. */
@@ -435,30 +451,51 @@ function sameProject(a: string, b: string): boolean {
 }
 
 /**
+ * Project dir a session FILE belongs to, for the canonical
+ * `<project>/.puck/sessions/<id>.jsonl` layout. Undefined for non-standard
+ * store depths (SDK users may pass any dir) — callers then treat the
+ * session's scope as unknown.
+ */
+export function projectOfSessionFile(path: string): string | undefined {
+	try {
+		const file = resolve(path);
+		const sessionsDir = dirname(file); // .../<project>/.puck/sessions
+		const dotPuck = dirname(sessionsDir); // .../<project>/.puck
+		if (basename(dotPuck) !== ".puck" || basename(sessionsDir) !== "sessions") return undefined;
+		return dirname(dotPuck);
+	} catch {
+		return undefined;
+	}
+}
+
+/**
  * Discover puck sessions belonging to OTHER projects for /resume's
  * cross-project view — the fix for "a folder with no puck sessions shows
  * only pi/codex/claude history, never puck's own other-folder sessions".
  *
- * Per-project stores are the source of truth but cannot be enumerated
- * without a registry; the global sqlite index records every session's
- * project, so the caller feeds its rows here and each candidate is verified
- * against the filesystem: missing files (project moved, sessions cleaned)
- * are skipped, never fatal. Rows pointing at the current project are
- * skipped too — its own store is scanned directly, keeping ids deduped.
+ * Rows come from the global registry (~/.puck/sessions.json — exact paths)
+ * and/or the sqlite index (~/.puck/index.db — project + id); each candidate
+ * is verified against the filesystem: missing files (project moved, sessions
+ * cleaned) are skipped, never fatal. Rows pointing at the current project
+ * are skipped too — its own store is scanned directly, keeping ids deduped.
+ * Duplicate rows resolving to the same file are collapsed by path.
  */
 export function scanForeignSessions(rows: ForeignSessionRow[], currentCwd: string): ForeignSessionHit[] {
 	const hits: ForeignSessionHit[] = [];
+	const seenPaths = new Set<string>();
 	for (const row of rows) {
-		if (!row.id || !row.project) continue;
-		let project: string;
+		if (!row.id) continue;
+		let path: string;
 		try {
-			project = resolve(row.project);
+			path = row.path ? resolve(row.path) : row.project ? join(resolve(row.project), ".puck", "sessions", `${row.id}.jsonl`) : "";
 		} catch {
 			continue;
 		}
-		if (sameProject(project, currentCwd)) continue;
-		const path = join(project, ".puck", "sessions", `${row.id}.jsonl`);
+		if (!path || seenPaths.has(path)) continue;
+		const project = row.project ? resolve(row.project) : projectOfSessionFile(path);
+		if (project && sameProject(project, currentCwd)) continue;
 		if (!existsSync(path)) continue;
+		seenPaths.add(path);
 		try {
 			hits.push({ stats: scanStats(path), path });
 		} catch {

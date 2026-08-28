@@ -4,10 +4,10 @@
 
 import assert from "node:assert/strict";
 import test from "node:test";
-import { appendFileSync, existsSync, mkdtempSync, rmSync } from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
-import { Session, SessionStore, scanForeignSessions } from "@puckguo123/session";
+import { dirname, join, resolve } from "node:path";
+import { Session, SessionStore, readSessionRegistry, registerSessionFile, registryFile, scanForeignSessions } from "@puckguo123/session";
 
 function makeTmpDir(): string {
 	return mkdtempSync(join(tmpdir(), "puck-session-"));
@@ -277,4 +277,132 @@ test("session: /clear markers survive roundtrip + statsAll reports cleared", () 
 	} finally {
 		rmSync(dir, { recursive: true, force: true });
 	}
+});
+
+// ---- global session registry ----------------------------------------------
+// /resume needs to enumerate puck sessions across ALL projects. pi/codex/
+// claude are discoverable because they keep sessions in one central home-dir
+// store; puck keeps them per-project, so the session layer registers every
+// created/loaded file in ~/.puck/sessions.json (exact paths, self-healing).
+
+/** Point PUCK_HOME at a throwaway home for one test block (restored after). */
+function withTempHome(fn: (home: string) => void): void {
+	const home = makeTmpDir();
+	const prevHome = process.env.PUCK_HOME;
+	const prevReg = process.env.PUCK_SESSION_REGISTRY;
+	process.env.PUCK_HOME = home;
+	try {
+		fn(home);
+	} finally {
+		if (prevHome === undefined) delete process.env.PUCK_HOME;
+		else process.env.PUCK_HOME = prevHome;
+		if (prevReg === undefined) delete process.env.PUCK_SESSION_REGISTRY;
+		else process.env.PUCK_SESSION_REGISTRY = prevReg;
+		rmSync(home, { recursive: true, force: true });
+	}
+}
+
+test("registry: upsert/read roundtrip, path dedupe, dead-file prune", () => {
+	withTempHome((home) => {
+		assert.equal(registryFile(), join(home, ".puck", "sessions.json"));
+		assert.deepEqual(readSessionRegistry(), []);
+
+		const fileA = join(home, "projA", ".puck", "sessions", "aaa.jsonl");
+		mkdirSync(dirname(fileA), { recursive: true });
+		writeFileSync(fileA, "x");
+		registerSessionFile(fileA, "aaa", "C:\projA");
+		const entries = readSessionRegistry();
+		assert.equal(entries.length, 1);
+		assert.equal(entries[0].id, "aaa");
+		assert.equal(entries[0].cwd, "C:\projA");
+		assert.ok(entries[0].path.endsWith(join("aaa.jsonl")));
+		assert.ok(typeof entries[0].updatedAt === "number");
+
+		// re-registering the same path dedupes instead of duplicating
+		registerSessionFile(fileA, "aaa", "C:\projA");
+		assert.equal(readSessionRegistry().length, 1);
+
+		// entries whose file disappeared are pruned by the next write — even
+		// when the write targets the dead path itself (it must never re-enter)
+		const fileB = join(home, "projB", ".puck", "sessions", "bbb.jsonl");
+		mkdirSync(dirname(fileB), { recursive: true });
+		writeFileSync(fileB, "x");
+		registerSessionFile(fileB, "bbb");
+		assert.equal(readSessionRegistry().length, 2);
+		rmSync(fileB);
+		registerSessionFile(fileB, "bbb");
+		const after = readSessionRegistry();
+		assert.equal(after.length, 1);
+		assert.equal(after[0].id, "aaa");
+	});
+});
+
+test("registry: corrupt file tolerated, disable knob honored", () => {
+	withTempHome((home) => {
+		// garbage json → reads as empty, writes recover the file
+		mkdirSync(join(home, ".puck"), { recursive: true });
+		writeFileSync(join(home, ".puck", "sessions.json"), "{not json");
+		assert.deepEqual(readSessionRegistry(), []);
+		const file = join(home, "p", "s.jsonl");
+		mkdirSync(dirname(file), { recursive: true });
+		writeFileSync(file, "x");
+		registerSessionFile(file, "s");
+		assert.equal(readSessionRegistry().length, 1);
+
+		// PUCK_SESSION_REGISTRY=0 disables both the path and the writes
+		process.env.PUCK_SESSION_REGISTRY = "0";
+		assert.equal(registryFile(), "");
+		registerSessionFile(file, "s2");
+		assert.deepEqual(readSessionRegistry(), []);
+	});
+});
+
+test("session: create + load auto-register their file in the global registry", () => {
+	withTempHome((home) => {
+		const project = makeTmpDir();
+		try {
+			const s = Session.create(join(project, ".puck", "sessions"), { id: "auto-reg", cwd: project });
+			s.append({ role: "user", content: "hi", timestamp: 1 });
+			const entries = readSessionRegistry();
+			assert.equal(entries.length, 1);
+			assert.equal(entries[0].id, "auto-reg");
+			assert.equal(entries[0].cwd, project);
+			assert.equal(entries[0].path, s.path);
+
+			// loading re-registers the same path (dedupe, not a second entry)
+			Session.load(s.path);
+			assert.equal(readSessionRegistry().length, 1);
+		} finally {
+			rmSync(project, { recursive: true, force: true });
+		}
+	});
+});
+
+test("scanForeignSessions: registry rows carry exact paths; duplicates collapse", () => {
+	withTempHome(() => {
+		const projectA = makeTmpDir();
+		const here = makeTmpDir();
+		try {
+			const s = Session.create(join(projectA, ".puck", "sessions"), { id: "path-row", cwd: projectA });
+			s.append({ role: "user", content: "另一个项目的问题", timestamp: 1 });
+
+			// registry-style row (exact path) + index-style row (project) for the
+			// SAME file collapse into one hit; a row with neither field is skipped
+			const hits = scanForeignSessions(
+				[
+					{ id: "path-row", path: s.path },
+					{ id: "path-row", project: projectA },
+					{ id: "nothing" },
+				],
+				here,
+			);
+			assert.equal(hits.length, 1);
+			assert.equal(hits[0].stats.id, "path-row");
+			assert.equal(hits[0].path, resolve(s.path));
+			assert.equal(hits[0].stats.cwd, resolve(projectA));
+		} finally {
+			rmSync(projectA, { recursive: true, force: true });
+			rmSync(here, { recursive: true, force: true });
+		}
+	});
 });

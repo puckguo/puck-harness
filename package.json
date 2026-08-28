@@ -11,7 +11,7 @@
 		"build": "tsc -b",
 		"clean": "node scripts/clean.mjs",
 		"typecheck": "tsc -p tsconfig.check.json --noEmit",
-		"test": "node --test tests/core.test.ts tests/llm.test.ts tests/tools.test.ts tests/session.test.ts tests/features.test.ts tests/sdk.test.ts tests/auth.test.ts tests/real-api.test.ts tests/timing.test.ts tests/term.test.ts tests/term-spinner.test.ts tests/term-mention.test.ts tests/errorlog.test.ts tests/import.test.ts tests/web.test.ts tests/memory.test.ts tests/esc-stop.test.ts tests/rewind.test.ts",
+		"test": "node scripts/run-tests.mjs",
 		"example": "node --experimental-strip-types examples/minimal.ts",
 		"example:mock": "node --experimental-strip-types examples/debug-mock.ts",
 		"example:trim": "node --experimental-strip-types examples/trim.ts",
