@@ -48,7 +48,7 @@ const SLASH_COMMANDS: SlashCommand[] = [
 	{ name: "compact", desc: "手动压缩上下文（摘要折叠旧对话，保留最近轮）" },
 	{ name: "clear", desc: "清空上下文，开始新对话（原会话保留在磁盘，可 /resume 找回）" },
 	{ name: "rewind", desc: "回退到之前的节点（双击 Esc 同样触发）：对话 / 代码 / 两者" },
-	{ name: "resume", desc: "选择一个历史会话继续对话（默认当前项目；a 切全部目录：各项目的 puck + pi/codex/claude）" },
+	{ name: "resume", desc: "选择一个历史会话继续对话（默认当前项目；a 切全部目录；默认 10 条，m 加载更多；r 重扫）" },
 	{ name: "memory", desc: "记忆系统：agent.md / experience / 每日总结" },
 	{ name: "skills", desc: "已加载的技能清单（来自 ~/.puck · ~/.claude · ~/.codex · ~/.pi 的 skills 目录）" },
 	{ name: "tasks", desc: "后台任务目录与状态（每日总结等，空闲时运行）" },
@@ -555,6 +555,15 @@ type ResumedSession = { id: string; model?: string };
  * toggle isn't available (no keystroke input), but the pipe-mode numbered
  * list still works.
  */
+/** /resume reveals entries incrementally: 10 by default, `m` loads 10 more.
+ * The merged cross-project + external list easily runs past 50 rows; showing
+ * everything at once buries the recent conversation the user almost always
+ * wants (and floods pipe-mode output). */
+const RESUME_PAGE = 10;
+/** selectFromList sentinel results for the /resume hotkeys (a/c reuse -2/-3). */
+const RESUME_MORE = -4; // m — reveal another page
+const RESUME_RESCAN = -5; // r — rescan stores and re-enter the picker
+
 async function resumePicker(
 	rl: ReturnType<typeof createInterface>,
 	context: {
@@ -687,56 +696,50 @@ async function resumePicker(
 		console.log(COLORS.dim + `(已合并 ~/.claude · ~/.pi · ~/.codex 中与当前项目匹配的会话)` + COLORS.reset);
 	}
 
-	const items = list.map((e) => {
-		const prefix = sourcePrefix(e.source);
-		// Yellow "已清空" badge for sessions the user /clear'd. They keep their
-		// original timestamp ordering so the user can still find them, but the
-		// visual cue makes it obvious the live conversation has moved on. The
-		// badge goes in BOTH the label and the detail row: the label tag is
-		// visible at a glance (TTY cursor width + pipe fallback), the detail
-		// tag survives colorblindness and matches /status's "compact ×N" style.
-		const clearedBadge = e.cleared ? "\x1b[33m[已清空]\x1b[0m " : "";
-		const clearedDetail = e.cleared ? "\x1b[33m · 已清空\x1b[0m" : "";
-		// Source tag is rendered in BOTH the label (colored `[pi]` etc.) AND
-		// the detail row (plain " · 来源 pi"), so users with colorblindness or
-		// a piped stdout can still tell harnesses apart.
-		const srcDetail = sourceDetail(e.source);
-		// cwd segment is informative only in "all" view; in cwd-scoped mode
-		// every item shares the same cwd (by definition), so the tag is
-		// redundant noise that eats horizontal space.
-		const cwdTag = showAll && e.cwd ? ` · ${shortCwd(e.cwd)}` : "";
-		const detail = `${e.turns} 轮 · ${e.assistantMessages} 条回复${e.toolCalls > 0 ? ` · ${e.toolCalls} 次工具` : ""}${e.compactions > 0 ? ` · compact ×${e.compactions}` : ""}${e.model ? " · " + e.model : ""}${cwdTag} · ${relativeTime(e.updatedAt)}${srcDetail}${clearedDetail}`;
-		return { label: clearedBadge + prefix + e.title, detail };
-	});
-	// Picker title: in cwd-scoped mode, the count of externals matched in
-	// this project gets surfaced in the hint so the user doesn't assume the
-	// default view is puck-only. In `a` (all) mode, every external is shown
-	// anyway, so we just label the source span. Count is taken from `list`
-	// so it always matches what's visible in the picker.
-	const externalCount = list.filter((e) => e.source !== "puck").length;
+	// Incremental reveal loop: `m` grows the visible page and re-renders. The
+	// revealed row count survives the a/c scope toggle; `r` rescans from
+	// scratch (fresh local/registry/external discovery), which resets it.
+	let limit = RESUME_PAGE;
+	for (;;) {
+	const visible = list.slice(0, limit);
+	const hasMore = list.length > visible.length;
+	const items = visible.map((e) => resumeItem(e, showAll));
+	// Picker title: in cwd-scoped mode, the count of externals matched in this
+	// project is surfaced so the user doesn't assume the default view is
+	// puck-only. With rows hidden behind `m`, the shown/total suffix says how
+	// much more there is to reveal. Counts come from `visible` so they always
+	// match what's on screen.
+	const externalCount = visible.filter((e) => e.source !== "puck").length;
 	const baseTitle = showAll ? "历史会话 — 全部目录" : `历史会话 — ${shortCwd(cwd)}`;
-	const title = showAll || externalCount === 0 ? baseTitle : `${baseTitle}（含 ${externalCount} 条外部会话）`;
+	const titled = showAll || externalCount === 0 ? baseTitle : `${baseTitle}（含 ${externalCount} 条外部会话）`;
+	const title = hasMore ? `${titled} · 已显 ${visible.length}/${list.length}` : titled;
 	const idx = await selectFromList(rl, title, items, {
 		askLine,
-		hint: showAll
-			? "↑/↓ 选择 · Enter 恢复 · c 仅当前目录 · r 重新扫描 · q 取消"
-			: "↑/↓ 选择 · Enter 恢复 · a 全部目录 · r 重新扫描 · q 取消",
-		extraKeys: showAll ? { c: -3 } : { a: -2 },
+		hint: (showAll ? "↑/↓ 选择 · Enter 恢复 · c 仅当前目录" : "↑/↓ 选择 · Enter 恢复 · a 全部目录") + (hasMore ? " · m 更多" : "") + " · r 重新扫描 · q 取消",
+		extraKeys: { ...(showAll ? { c: -3 } : { a: -2 }), ...(hasMore ? { m: RESUME_MORE } : {}), r: RESUME_RESCAN },
 	});
+	if (idx === RESUME_MORE) {
+		limit += RESUME_PAGE;
+		continue;
+	}
+	if (idx === RESUME_RESCAN) {
+		console.log("重新扫描（本地 · 全局注册表 · 外部 harness）…");
+		return resumePicker(rl, context);
+	}
 	if (idx === -2 || idx === -3) {
-		// a / c → toggle the scope and re-enter the picker
+		// a / c → toggle the scope; the revealed row count carries over
 		if (showAll) {
 			console.log("切换为：仅当前目录");
-			return resumeScopePicker(rl, context, cwd, entries, true);
+			return resumeScopePicker(rl, context, cwd, entries, true, limit);
 		}
 		console.log("切换为：全部目录");
-		return resumeScopePicker(rl, context, cwd, entries, false);
+		return resumeScopePicker(rl, context, cwd, entries, false, limit);
 	}
 	if (idx < 0) {
 		console.log("已取消");
 		return true;
 	}
-	const chosen = list[idx];
+	const chosen = visible[idx];
 	if (chosen.source !== "puck") {
 		const info = chosen.externalInfo!;
 		const id = chosen.id;
@@ -754,6 +757,7 @@ async function resumePicker(
 	}
 	await context.onResume?.(chosen.id, chosen.model, chosen);
 	return true;
+	} // incremental reveal loop
 }
 
 /**
@@ -782,6 +786,9 @@ async function resumeScopePicker(
 		externalInfo?: ExternalSessionInfo;
 	}>,
 	currentOnly: boolean,
+	/** Rows already revealed by `m` before a scope toggle — carries over so
+	 * toggling doesn't snap the user back to the first page. */
+	initialLimit: number = RESUME_PAGE,
 ): Promise<boolean> {
 	const scoped = entries.filter((e) => {
 		if (currentOnly) {
@@ -795,34 +802,40 @@ async function resumeScopePicker(
 	if (currentOnly && scoped.length === 0) {
 		console.log(COLORS.dim + `(当前目录 ${shortCwd(cwd)} 下没有历史会话，显示全部)` + COLORS.reset);
 	}
-	const items = list.map((e) => {
-		const prefix = sourcePrefix(e.source);
-		const clearedBadge = e.cleared ? "\x1b[33m[已清空]\x1b[0m " : "";
-		const clearedDetail = e.cleared ? "\x1b[33m · 已清空\x1b[0m" : "";
-		const srcDetail = sourceDetail(e.source);
-		const cwdTag = !currentOnly && e.cwd ? ` · ${shortCwd(e.cwd)}` : "";
-		const detail = `${e.turns} 轮 · ${e.assistantMessages} 条回复${e.toolCalls > 0 ? ` · ${e.toolCalls} 次工具` : ""}${e.compactions > 0 ? ` · compact ×${e.compactions}` : ""}${e.model ? " · " + e.model : ""}${cwdTag} · ${relativeTime(e.updatedAt)}${srcDetail}${clearedDetail}`;
-		return { label: clearedBadge + prefix + e.title, detail };
-	});
-	const externalCount = list.filter((e) => e.source !== "puck").length;
+	// Incremental reveal loop, same contract as the root picker: `m` pages in
+	// RESUME_PAGE rows at a time (the count survives toggles), `r` rescans
+	// from scratch via resumePicker (which resets it).
+	let limit = initialLimit;
+	for (;;) {
+	const visible = list.slice(0, limit);
+	const hasMore = list.length > visible.length;
+	const items = visible.map((e) => resumeItem(e, !currentOnly));
+	const externalCount = visible.filter((e) => e.source !== "puck").length;
 	const baseTitle = currentOnly ? `历史会话 — ${shortCwd(cwd)}` : "历史会话 — 全部目录";
-	const title = currentOnly && externalCount > 0 ? `${baseTitle}（含 ${externalCount} 条外部会话）` : baseTitle;
+	const titled = currentOnly && externalCount > 0 ? `${baseTitle}（含 ${externalCount} 条外部会话）` : baseTitle;
+	const title = hasMore ? `${titled} · 已显 ${visible.length}/${list.length}` : titled;
 	const idx = await selectFromList(rl, title, items, {
 		askLine,
-		hint: currentOnly
-			? "↑/↓ 选择 · Enter 恢复 · a 全部目录 · r 重新扫描 · q 取消"
-			: "↑/↓ 选择 · Enter 恢复 · c 仅当前目录 · r 重新扫描 · q 取消",
-		extraKeys: currentOnly ? { a: -2 } : { c: -3 },
+		hint: (currentOnly ? "↑/↓ 选择 · Enter 恢复 · a 全部目录" : "↑/↓ 选择 · Enter 恢复 · c 仅当前目录") + (hasMore ? " · m 更多" : "") + " · r 重新扫描 · q 取消",
+		extraKeys: { ...(currentOnly ? { a: -2 } : { c: -3 }), ...(hasMore ? { m: RESUME_MORE } : {}), r: RESUME_RESCAN },
 	});
+	if (idx === RESUME_MORE) {
+		limit += RESUME_PAGE;
+		continue;
+	}
+	if (idx === RESUME_RESCAN) {
+		console.log("重新扫描（本地 · 全局注册表 · 外部 harness）…");
+		return resumePicker(rl, context);
+	}
 	if (idx === -2 || idx === -3) {
 		console.log(currentOnly ? "切换为：全部目录" : "切换为：仅当前目录");
-		return resumeScopePicker(rl, context, cwd, entries, !currentOnly);
+		return resumeScopePicker(rl, context, cwd, entries, !currentOnly, limit);
 	}
 	if (idx < 0) {
 		console.log("已取消");
 		return true;
 	}
-	const chosen = list[idx];
+	const chosen = visible[idx];
 	if (chosen.source !== "puck") {
 		const info = chosen.externalInfo!;
 		const id = chosen.id;
@@ -840,6 +853,27 @@ async function resumeScopePicker(
 	}
 	await context.onResume?.(chosen.id, chosen.model, chosen);
 	return true;
+	} // incremental reveal loop
+}
+
+/**
+ * One /resume row, shared by both picker views: `[source] 标题` label plus
+ * the detail line (轮次/回复/工具/compact/模型/cwd · 时间 · 来源 · 已清空).
+ * `showCwd` renders the cwd segment — informative only in the
+ * all-directories view; in cwd-scoped mode every row shares the same cwd by
+ * definition, so the tag is redundant noise.
+ */
+function resumeItem(
+	e: { source: "puck" | ImportSource; title: string; turns: number; assistantMessages: number; toolCalls: number; compactions: number; cleared?: boolean; model?: string; updatedAt: number; cwd?: string },
+	showCwd: boolean,
+): { label: string; detail: string } {
+	// Yellow "已清空" badge for sessions the user /clear'd: label tag visible
+	// at a glance, detail tag survives piped-stdout ANSI stripping.
+	const clearedBadge = e.cleared ? "\x1b[33m[已清空]\x1b[0m " : "";
+	const clearedDetail = e.cleared ? "\x1b[33m · 已清空\x1b[0m" : "";
+	const cwdTag = showCwd && e.cwd ? ` · ${shortCwd(e.cwd)}` : "";
+	const detail = `${e.turns} 轮 · ${e.assistantMessages} 条回复${e.toolCalls > 0 ? ` · ${e.toolCalls} 次工具` : ""}${e.compactions > 0 ? ` · compact ×${e.compactions}` : ""}${e.model ? " · " + e.model : ""}${cwdTag} · ${relativeTime(e.updatedAt)}${sourceDetail(e.source)}${clearedDetail}`;
+	return { label: clearedBadge + sourcePrefix(e.source) + e.title, detail };
 }
 
 /**

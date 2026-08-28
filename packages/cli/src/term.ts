@@ -1031,6 +1031,12 @@ export function selectFromList(rl: Interface, title: string, items: SelectItem[]
 		process.stdout.write("选择编号: ");
 		return opts.askLine(rl).then((answer) => {
 			const trimmed = answer.trim();
+			// extraKeys work in pipe mode too (single-char answers like `m` for
+			// "load more" or `a`/`c` for scope toggles) — the TTY hotkeys and the
+			// pipe fallback stay feature-equal
+			if (opts.extraKeys && Object.prototype.hasOwnProperty.call(opts.extraKeys, trimmed)) {
+				return opts.extraKeys[trimmed];
+			}
 			if (/^\d+$/.test(trimmed)) {
 				const n = Number(trimmed);
 				if (n >= 1 && n <= items.length) return n - 1;
