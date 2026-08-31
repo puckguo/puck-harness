@@ -33,6 +33,20 @@ const parameters = {
 	required: ["command"],
 } as const;
 
+/**
+ * Drain window after the child exits before settling without "close".
+ *
+ * On Windows a grandchild spawned via `shell: true` + `stdio: "ignore"`
+ * (the classic "start a detached dev server" script) inherits duplicate
+ * pipe handles. The direct child then exits, but the grandchild keeps the
+ * pipes open forever — Node's "close" event (exit + stdio ended) never
+ * fires, so a tool waiting only on "close" hangs for good, and neither
+ * ESC-abort nor the timeout can settle it (both just kill an already-dead
+ * tree). After "exit" we give the pipes this long to drain, then settle
+ * regardless of stragglers.
+ */
+const EXIT_DRAIN_MS = 500;
+
 /** Run a shell command and capture its output. Exposed for reuse/tests. */
 export function runShellCommand(
 	command: string,
@@ -100,6 +114,14 @@ export function runShellCommand(
 			stderr += String(error);
 			exitCode = null;
 			finish();
+		});
+		child.on("exit", (code) => {
+			// capture now — the grace timer below may settle before "close" runs
+			exitCode = code;
+			// exit → settle after the drain window even without "close": a
+			// grandchild holding the pipes must not hang the tool forever
+			// (see EXIT_DRAIN_MS). "close" arriving first wins; finish is idempotent.
+			setTimeout(finish, EXIT_DRAIN_MS);
 		});
 		child.on("close", (code) => {
 			exitCode = code;

@@ -36,6 +36,69 @@ test("bash: timeout kills the command", async () => {
 	assert.ok(result.durationMs < 5000);
 });
 
+/**
+ * Regression: a grandchild that keeps duplicate pipe handles alive after the
+ * direct child exits (Windows: spawn `shell:true` + `stdio:"ignore"` chains,
+ * e.g. scripts that start a detached dev server). Node's "close" event never
+ * fires then — waiting on it alone hangs the tool forever, and neither
+ * ESC-abort nor the timeout can settle it. The tool must settle on "exit"
+ * (after a short drain window) instead.
+ */
+test("bash: settles even when a grandchild holds the stdio pipes", async () => {
+	const dir = makeTmpDir();
+	try {
+		// child: print, spawn the pipe-holding grandchild, exit 0 immediately.
+		// the grandchild self-terminates after 8s so the test leaks no orphans
+		// (it outlives the tool call — exactly the point).
+		const script = join(dir, "leak.cjs");
+		writeFileSync(
+			script,
+			`const { spawn } = require('node:child_process');
+			spawn('cmd.exe', ['/d','/s','/c', ${JSON.stringify(`${process.execPath} -e "setTimeout(()=>{},8000)"`)}],
+				{ shell: true, stdio: 'ignore' }).unref();
+			console.log('grandchild spawned');
+			process.exit(0);`,
+		);
+		const result = await runShellCommand(`${JSON.stringify(process.execPath)} ${JSON.stringify(script)} 2>&1`, dir, {});
+		assert.equal(result.exitCode, 0, "exited normally");
+		assert.match(result.output, /grandchild spawned/);
+		// without the fix this promise NEVER settles ("close" never fires)
+		assert.ok(result.durationMs < 5000, `settled in ${result.durationMs}ms`);
+	} finally {
+		rmSync(dir, { recursive: true, force: true });
+	}
+});
+
+/** Same hang via the abort path: ESC while the (leaky) command still runs. */
+test("bash: abort settles even when a grandchild holds the pipes", async () => {
+	const dir = makeTmpDir();
+	try {
+		// child: spawn the pipe-holding grandchild, then keep running (never exits);
+		// grandchild self-terminates after 8s so the test leaks no orphans
+		const script = join(dir, "leak-abort.cjs");
+		writeFileSync(
+			script,
+			`const { spawn } = require('node:child_process');
+			spawn('cmd.exe', ['/d','/s','/c', ${JSON.stringify(`${process.execPath} -e "setTimeout(()=>{},8000)"`)}],
+				{ shell: true, stdio: 'ignore' }).unref();
+			console.log('grandchild spawned');
+			setInterval(() => {}, 8000);`,
+		);
+		const ctrl = new AbortController();
+		setTimeout(() => ctrl.abort(), 300); // ESC mid-execution
+		const result = await runShellCommand(
+			`${JSON.stringify(process.execPath)} ${JSON.stringify(script)} 2>&1`,
+			dir,
+			{ timeoutSeconds: 60, signal: ctrl.signal },
+		);
+		assert.equal(result.aborted, true);
+		assert.match(result.output, /grandchild spawned/);
+		assert.ok(result.durationMs < 5000, `settled in ${result.durationMs}ms`);
+	} finally {
+		rmSync(dir, { recursive: true, force: true });
+	}
+});
+
 test("bash: tool result marks non-zero exits as errors", async () => {
 	const bash = createBashTool();
 	const ok = await bash.execute({ command: `${NODE} -e "console.log(1)"` }, ctx);

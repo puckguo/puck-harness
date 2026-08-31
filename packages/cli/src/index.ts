@@ -116,7 +116,9 @@ const MOCK_SCRIPT = [
 		text: "Let me check the current directory first.",
 		delayMs: 700,
 		toolCalls: [
-			{ name: "bash", arguments: { command: "echo hello from puck" } },
+			// PUCK_MOCK_BASH overrides the demo command — the PTY regression
+			// harness (scripts/pty-escbash.cjs) injects long-running commands here
+			{ name: "bash", arguments: process.env.PUCK_MOCK_BASH ? (JSON.parse(process.env.PUCK_MOCK_BASH) as { command: string; timeout?: number }) : { command: "echo hello from puck" } },
 			{ name: "write", arguments: { path: "puck-demo.txt", content: "written by the mock model" } },
 		],
 	},
